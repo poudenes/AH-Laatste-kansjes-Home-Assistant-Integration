@@ -12,7 +12,7 @@
  *   show_images: true
  *   show_controls: true      # search box, min. discount and sort in the card
  */
-const CARD_VERSION = "0.1.1";
+const CARD_VERSION = "0.1.2";
 
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -131,7 +131,7 @@ class AHLaatsteKansCard extends HTMLElement {
         .prices { display: flex; align-items: baseline; gap: 6px; }
         .was { text-decoration: line-through; color: var(--secondary-text-color); font-size: 0.8em; }
         .now { font-weight: 800; color: #f08a24; font-size: 1.1em; }
-        .row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.75em; color: var(--secondary-text-color); }
+        .row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.9em; color: var(--secondary-text-color); }
         .urgent { color: var(--error-color, #d32f2f); font-weight: 600; }
         .stock { background: var(--divider-color); border-radius: 999px; padding: 1px 6px; font-weight: 700; color: var(--primary-text-color); }
         .empty { padding: 16px; color: var(--secondary-text-color); text-align: center; }
