@@ -47,7 +47,7 @@ De loginpagina van AH gebruikt reCAPTCHA en een 6-cijferige code. Daarom vraagt 
 logt in op AH's eigen pagina, en HA krijgt alleen de eenmalige code die AH aan het eind teruggeeft. Daarna ververst
 HA zijn token zelf. Je logt alleen opnieuw in als AH de sessie ooit intrekt; HA vraagt daar dan zelf om.
 
-**Met de [Mac-app](https://github.com/poudenes/claude)** (aanbevolen, en getest):
+**Met de [Mac-app](https://github.com/poudenes/AH-Laatste-kansjes-MacOS)** (aanbevolen, en getest):
 1. Kies in de app **Kansjes › Code voor Home Assistant…**
 2. Log in en vul de 6 cijfers in. De code staat daarna op je klembord.
 3. Plak hem in de HA-stap *Inloggen bij Albert Heijn* en verstuur **direct**, want de code verloopt snel.
@@ -125,5 +125,5 @@ Bij elke push controleert GitHub Actions de integratie met **hassfest** (de offi
 2. Maak op GitHub een release met tag `v<versie>`. HACS ziet hem vanzelf.
 
 ## Verwant
-- [Laatstekansjes voor macOS](https://github.com/poudenes/claude): de Mac-app, met *Code voor Home Assistant…*.
+- [Laatstekansjes voor macOS](https://github.com/poudenes/AH-Laatste-kansjes-MacOS): de Mac-app, met *Code voor Home Assistant…*.
 - Hoe de AH-endpoints werken, is gebaseerd op [gwillem/appie-go](https://github.com/gwillem/appie-go). Er is geen code overgenomen.
