@@ -4,10 +4,10 @@
   "codeowners": ["@poudenes"],
   "config_flow": true,
   "dependencies": ["frontend", "http"],
-  "documentation": "https://github.com/poudenes/ha-ah-laatste-kans",
+  "documentation": "https://github.com/poudenes/AH-Laatste-kansjes-Home-Assistant-Integration",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/poudenes/ha-ah-laatste-kans/issues",
+  "issue_tracker": "https://github.com/poudenes/AH-Laatste-kansjes-Home-Assistant-Integration/issues",
   "requirements": [],
   "version": "0.1.0"
 }

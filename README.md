@@ -26,7 +26,7 @@ dashboard, heeft de complete lijst gewoon. De state (het aantal) wordt wél bewa
 ## Installeren
 
 ### Via HACS (aanbevolen)
-1. HACS › ⋮ › **Aangepaste repositories** → `https://github.com/poudenes/ha-ah-laatste-kans`, type **Integratie**.
+1. HACS › ⋮ › **Aangepaste repositories** → `https://github.com/poudenes/AH-Laatste-kansjes-Home-Assistant-Integration`, type **Integratie**.
 2. Zoek **AH Laatste Kans** in HACS en klik op **Downloaden**.
 3. Herstart Home Assistant.
 4. **Instellingen › Apparaten en diensten › Integratie toevoegen › AH Laatste Kans.**
