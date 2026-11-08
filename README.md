@@ -47,14 +47,14 @@ De loginpagina van AH gebruikt reCAPTCHA en een 6-cijferige code. Daarom vraagt 
 logt in op AH's eigen pagina, en HA krijgt alleen de eenmalige code die AH aan het eind teruggeeft. Daarna ververst
 HA zijn token zelf. Je logt alleen opnieuw in als AH de sessie ooit intrekt; HA vraagt daar dan zelf om.
 
-**Makkelijkst, met de [Mac-app](https://github.com/poudenes/claude):** menu **Kansjes › Code voor Home Assistant…** → log in → de code staat al op je
-klembord → plak hem in HA. Doe dat binnen een minuut, want de code verloopt snel.
+**Met de [Mac-app](https://github.com/poudenes/claude)** (aanbevolen, en getest):
+1. Kies in de app **Kansjes › Code voor Home Assistant…**
+2. Log in en vul de 6 cijfers in. De code staat daarna op je klembord.
+3. Plak hem in de HA-stap *Inloggen bij Albert Heijn* en verstuur **direct**, want de code verloopt snel.
 
-**Zonder Mac-app:**
-1. Open op je computer de ontwikkelaarstools van je browser (F12, of ⌥⌘I) op het tabblad *Console*.
-2. Klik in de HA-stap op de link naar de AH-loginpagina, log in en vul de 6 cijfers in.
-3. De pagina probeert daarna `appie://login-exit?code=…` te openen. Kopieer die regel uit de console (Safari of
-   Firefox: tabblad *Netwerk*, laatste verzoek) en plak hem in HA.
+**Zonder Mac-app:** dit werkt mogelijk niet. AH's verificatiestap weigert soms gewone browsers, omdat de login
+voor de AH-app bedoeld is. Je kunt het proberen via de ontwikkelaarstools (F12 › Console): log in via de link
+in HA en kopieer daarna de regel `appie://login-exit?code=…`.
 
 Daarna vul je je **postcode** in en vink je de **winkels** aan.
 
