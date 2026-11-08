@@ -1,0 +1,101 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "AH Laatste Kans",
+        "description": "Choose the country of your Albert Heijn account.",
+        "data": {
+          "country": "Country"
+        }
+      },
+      "login": {
+        "title": "Log in to Albert Heijn",
+        "description": "You log in on **AH's own page** (password and 6-digit code). Home Assistant never sees your password.\n\n1. On a computer, **first open your browser's developer tools** (F12, or ⌥⌘I on a Mac) on the **Console** tab.\n2. In that same tab, open the [AH login page]({login_url}).\n3. Log in and enter the 6-digit code.\n4. The page then tries to open `appie://login-exit?code=…`. That fails, but the console shows that line (Safari and Firefox: **Network** tab, last request). Copy it and paste it below. Just the code also works.\n\nThe code expires quickly: paste it within a minute.\n\n💡 Easier with the Mac app: menu **Kansjes › Code voor Home Assistant…**",
+        "data": {
+          "code": "appie://login-exit URL or code"
+        }
+      },
+      "postcode": {
+        "title": "Where do you shop?",
+        "description": "Enter your postcode. Then choose the stores.",
+        "data": {
+          "postcode": "Postcode",
+          "store_count": "Number of nearby stores"
+        }
+      },
+      "stores": {
+        "title": "Choose your stores",
+        "description": "AH stores near {postcode}. Every selected store gets its own sensor. You can change this later via **Configure**.",
+        "data": {
+          "stores": "Stores"
+        }
+      }
+    },
+    "error": {
+      "invalid_code": "That does not look like a valid code or appie:// link.",
+      "auth_failed": "AH refused the code. It probably expired or was already used. Log in again and paste the new code right away.",
+      "cannot_connect": "Cannot reach AH.",
+      "no_stores": "No AH stores found near this postcode.",
+      "no_selection": "Choose at least one store.",
+      "unknown": "Unexpected error from AH."
+    },
+    "abort": {
+      "already_configured": "This AH account has already been added.",
+      "reauth_successful": "Logged in again. The integration is being reloaded."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "AH Laatste Kans",
+        "menu_options": {
+          "stores": "Switch stores on or off",
+          "search": "Find stores near a (different) postcode",
+          "settings": "Refresh interval and watchlist"
+        }
+      },
+      "stores": {
+        "title": "Stores",
+        "description": "Unchecked stores are removed together with their sensor.",
+        "data": {
+          "stores": "Stores"
+        }
+      },
+      "search": {
+        "title": "Find stores",
+        "description": "Find stores near a postcode. Your current stores stay in the list.",
+        "data": {
+          "postcode": "Postcode",
+          "store_count": "Number of nearby stores"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Watchlist: keywords separated by commas (e.g. `salmon, Ben & Jerry, cheese`). Matches appear in the watchlist sensor and in the `ah_laatste_kans_new_bargain` event (`watched: true`).",
+        "data": {
+          "scan_interval": "Refresh every",
+          "keywords": "Watchlist"
+        }
+      }
+    },
+    "error": {
+      "no_selection": "Choose at least one store.",
+      "no_stores": "No AH stores found near this postcode.",
+      "cannot_connect": "Cannot reach AH.",
+      "unknown": "Unexpected error from AH."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "laatste_kans": {
+        "name": "Laatste Kans"
+      },
+      "totaal": {
+        "name": "Laatste Kans total"
+      },
+      "volglijst": {
+        "name": "Laatste Kans watchlist"
+      }
+    }
+  }
+}

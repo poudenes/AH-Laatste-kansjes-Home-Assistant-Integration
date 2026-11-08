@@ -1,0 +1,101 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "AH Laatste Kans",
+        "description": "Kies het land van je Albert Heijn-account.",
+        "data": {
+          "country": "Land"
+        }
+      },
+      "login": {
+        "title": "Inloggen bij Albert Heijn",
+        "description": "Je logt in op de **eigen pagina van AH** (met wachtwoord en de 6-cijferige code). Home Assistant ziet je wachtwoord nooit.\n\n1. Open op een computer **eerst de ontwikkelaarstools** van je browser (F12, of ⌥⌘I op de Mac) op het tabblad **Console**.\n2. Open in datzelfde tabblad de [AH-loginpagina]({login_url}).\n3. Log in en vul de 6-cijferige code in.\n4. Daarna probeert de pagina `appie://login-exit?code=…` te openen. Dat lukt niet, maar de console toont die regel (in Safari en Firefox: tabblad **Netwerk**, laatste verzoek). Kopieer hem en plak hem hieronder. Alleen de code mag ook.\n\nDe code is maar kort geldig: plak hem binnen een minuut.\n\n💡 Makkelijker met de Mac-app: menu **Kansjes › Code voor Home Assistant…**",
+        "data": {
+          "code": "appie://login-exit-URL of code"
+        }
+      },
+      "postcode": {
+        "title": "Waar doe je boodschappen?",
+        "description": "Vul je postcode in. Daarna kies je de winkels.",
+        "data": {
+          "postcode": "Postcode",
+          "store_count": "Aantal winkels in de buurt"
+        }
+      },
+      "stores": {
+        "title": "Kies je winkels",
+        "description": "AH-winkels bij {postcode}. Elke aangevinkte winkel krijgt een eigen sensor. Achteraf aanpassen kan via **Configureren**.",
+        "data": {
+          "stores": "Winkels"
+        }
+      }
+    },
+    "error": {
+      "invalid_code": "Dat lijkt geen geldige code of appie://-link.",
+      "auth_failed": "AH weigerde de code. Hij is waarschijnlijk verlopen of al gebruikt. Log opnieuw in en plak de nieuwe code direct.",
+      "cannot_connect": "Kan AH niet bereiken.",
+      "no_stores": "Geen AH-winkels gevonden bij deze postcode.",
+      "no_selection": "Kies minimaal één winkel.",
+      "unknown": "Onverwachte fout van AH."
+    },
+    "abort": {
+      "already_configured": "Dit AH-account is al toegevoegd.",
+      "reauth_successful": "Opnieuw ingelogd. De integratie wordt herladen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "AH Laatste Kans",
+        "menu_options": {
+          "stores": "Winkels aan- of uitzetten",
+          "search": "Winkels zoeken bij een (andere) postcode",
+          "settings": "Verversen en volglijst"
+        }
+      },
+      "stores": {
+        "title": "Winkels",
+        "description": "Uitgevinkte winkels verdwijnen met hun sensor.",
+        "data": {
+          "stores": "Winkels"
+        }
+      },
+      "search": {
+        "title": "Winkels zoeken",
+        "description": "Zoek winkels bij een postcode. Je huidige winkels blijven in de lijst staan.",
+        "data": {
+          "postcode": "Postcode",
+          "store_count": "Aantal winkels in de buurt"
+        }
+      },
+      "settings": {
+        "title": "Instellingen",
+        "description": "Volglijst: zoekwoorden gescheiden door komma's (bijv. `zalm, Ben & Jerry, kaas`). Treffers staan in de volglijst-sensor en in het event `ah_laatste_kans_new_bargain` (`watched: true`).",
+        "data": {
+          "scan_interval": "Verversen elke",
+          "keywords": "Volglijst"
+        }
+      }
+    },
+    "error": {
+      "no_selection": "Kies minimaal één winkel.",
+      "no_stores": "Geen AH-winkels gevonden bij deze postcode.",
+      "cannot_connect": "Kan AH niet bereiken.",
+      "unknown": "Onverwachte fout van AH."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "laatste_kans": {
+        "name": "Laatste Kans"
+      },
+      "totaal": {
+        "name": "Laatste Kans totaal"
+      },
+      "volglijst": {
+        "name": "Laatste Kans volglijst"
+      }
+    }
+  }
+}
