@@ -1,1 +1,3 @@
 pytest-homeassistant-custom-component
+# The integration depends on frontend (for the card); the test harness does not install it.
+home-assistant-frontend
