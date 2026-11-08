@@ -10,6 +10,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -32,6 +33,10 @@ type AHConfigEntry = ConfigEntry[AHCoordinator]
 def parse_keywords(text: str | None) -> list[str]:
     """'zalm, Ben & Jerry, kaas' -> ['zalm', 'Ben & Jerry', 'kaas']."""
     return [k.strip() for k in (text or "").replace("\n", ",").split(",") if k.strip()]
+
+
+def notified_store_key(entry_id: str) -> str:
+    return f"{DOMAIN}.{entry_id}.notified"
 
 
 def item_key(store_id: str, item: dict[str, Any]) -> str:
@@ -58,6 +63,9 @@ class AHCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.options_snapshot = dict(entry.options)
         self._images: dict[int, str] = {}
         self._seen: set[str] | None = None
+        # Watchlist matches that already fired an event; kept on disk so a restart does not notify again.
+        self._notified_store: Store[list[str]] = Store(hass, 1, notified_store_key(entry.entry_id))
+        self._notified: set[str] | None = None
 
     @property
     def stores(self) -> dict[str, dict[str, str]]:
@@ -68,6 +76,8 @@ class AHCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return parse_keywords(self.config_entry.options.get(CONF_KEYWORDS))
 
     async def _async_update_data(self) -> dict[str, Any]:
+        if self._notified is None:
+            self._notified = set(await self._notified_store.async_load() or [])
         stores = self.stores
         semaphore = asyncio.Semaphore(3)  # at most 3 stores at the same time: be nice to AH
 
@@ -118,18 +128,27 @@ class AHCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 item["image"] = self._images.get(item["product_id"])
 
     def _fire_new_bargain_events(self, data_stores: dict[str, dict[str, Any]]) -> None:
+        """Fire an event for every new product, and once for every watchlist match.
+
+        After a start everything already on the shelf counts as known, so there is no flood of events,
+        except watchlist matches that were never reported: those fire once (also after a restart,
+        thanks to the list on disk), so a freshly saved watchlist reports what is there right now.
+        """
         keys = {item_key(sid, i) for sid, s in data_stores.items() for i in s["items"]}
-        if self._seen is None:  # first update after start: everything counts as known
-            self._seen = keys
-            return
+        first = self._seen is None
+        notified = set(self._notified or ())
         keywords = [k.lower() for k in self.keywords]
         stores = self.stores
         for sid, store in data_stores.items():
             for item in store["items"]:
                 key = item_key(sid, item)
-                if key in self._seen:
-                    continue
                 text = f"{item['title']} {item['brand']}".lower()
+                hits = [k for k in keywords if k in text]
+                is_new = not first and key not in self._seen
+                if not is_new and not (hits and key not in notified):
+                    continue
+                if hits:
+                    notified.add(key)
                 self.hass.bus.async_fire(
                     EVENT_NEW_BARGAIN,
                     {
@@ -144,11 +163,18 @@ class AHCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "expires": item["expires"],
                         "image": item["image"],
                         "url": item["url"],
-                        "watched": any(k in text for k in keywords),
-                        "matched_keywords": [k for k in keywords if k in text],
+                        "watched": bool(hits),
+                        "matched_keywords": hits,
                     },
                 )
         self._seen = keys
+        # Forget products that are gone, so the list on disk stays small
+        # (but not those of a store that could not be fetched this time).
+        failed = {sid for sid, s in data_stores.items() if s["error"]}
+        notified = {k for k in notified if k in keys or k.split("|", 1)[0] in failed}
+        if notified != self._notified:
+            self._notified = notified
+            self._notified_store.async_delay_save(lambda: sorted(notified), 1)
 
     def _watch_matches(self, data_stores: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
         keywords = [k.lower() for k in self.keywords]

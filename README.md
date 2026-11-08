@@ -12,10 +12,15 @@ met een eigen dashboard-card.
 | Entiteit | State | Attributen |
 |---|---|---|
 | `sensor.ah_<straat>_<nr>_<plaats>_laatste_kans` (één per winkel, elk een eigen apparaat) | aantal producten | `items` (titel, merk, prijs, oude prijs, korting, voorraad, THT, plaatje, link), `best_discount`, `categories`, adres |
-| `sensor.ah_laatste_kans_laatste_kans_totaal` | totaal over alle winkels | `top`: de 10 beste deals |
-| `sensor.ah_laatste_kans_laatste_kans_volglijst` | aantal treffers op je volglijst | `keywords`, `matches` |
+| `sensor.ah_laatste_kans_laatste_kans_totaal` (of `_total`) | totaal over alle winkels | `top`: de 10 beste deals |
+| `sensor.ah_laatste_kans_laatste_kans_volglijst` (of `_watchlist`) | aantal treffers op je volglijst | `keywords`, `matches` |
 
 En een **event** `ah_laatste_kans_new_bargain` voor elk product dat er sinds de vorige update bij is gekomen.
+Producten op je volglijst geven ook één keer een event als ze er al lagen, bijvoorbeeld meteen nadat je de
+volglijst hebt opgeslagen. Daarna niet meer, ook niet na een herstart.
+
+De Engelse namen (`_total`, `_watchlist`) krijg je als Home Assistant in het Engels stond toen je de integratie
+installeerde.
 
 **Waarom één sensor per winkel (en niet per product)?** Laatste Kans-producten wisselen dagelijks. Sensoren per
 product zouden steeds verschijnen en verdwijnen en je entity-register vervuilen. Eén sensor per winkel heeft een
