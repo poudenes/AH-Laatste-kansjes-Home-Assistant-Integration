@@ -1,0 +1,13 @@
+{
+  "domain": "ah_laatste_kans",
+  "name": "AH Laatste Kans",
+  "codeowners": ["@poudenes"],
+  "config_flow": true,
+  "dependencies": ["frontend", "http"],
+  "documentation": "https://github.com/poudenes/ha-ah-laatste-kans",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/poudenes/ha-ah-laatste-kans/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
