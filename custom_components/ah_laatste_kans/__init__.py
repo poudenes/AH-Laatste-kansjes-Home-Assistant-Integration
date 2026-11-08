@@ -12,11 +12,12 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
 from .api import AHApi
 from .const import CARD_URL, CONF_COUNTRY, CONF_STORES, CONF_TOKENS, DOMAIN, VERSION
-from .coordinator import AHConfigEntry, AHCoordinator
+from .coordinator import AHConfigEntry, AHCoordinator, notified_store_key
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +53,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: AHConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: AHConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: AHConfigEntry) -> None:
+    """Clean up the list of already reported watchlist matches."""
+    await Store(hass, 1, notified_store_key(entry.entry_id)).async_remove()
 
 
 async def _async_entry_updated(hass: HomeAssistant, entry: AHConfigEntry) -> None:

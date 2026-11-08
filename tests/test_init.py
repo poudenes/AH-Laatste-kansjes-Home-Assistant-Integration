@@ -188,6 +188,30 @@ async def test_new_bargain_event(hass: HomeAssistant, mock_api) -> None:
     assert data["watched"] is True and data["matched_keywords"] == ["brie"]
 
 
+async def test_existing_watch_match_fires_once(hass: HomeAssistant, mock_api) -> None:
+    """A product already on the shelf fires once for the watchlist, not again on a refresh or restart."""
+    events = async_capture_events(hass, EVENT_NEW_BARGAIN)
+    entry = make_entry(keywords="zalm")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Only the watchlist match; the other products on the shelf stay quiet after a start.
+    assert [e.data["title"] for e in events] == ["AH Zalmfilet"]
+    assert events[0].data["watched"] is True and events[0].data["matched_keywords"] == ["zalm"]
+
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert len(events) == 1
+
+    # Let the list reach the disk, then restart the integration.
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=5))
+    await hass.async_block_till_done()
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert len(events) == 1
+
+
 # ---------- options: stores on/off ----------
 
 async def test_options_switch_store_off(hass: HomeAssistant, mock_api) -> None:
