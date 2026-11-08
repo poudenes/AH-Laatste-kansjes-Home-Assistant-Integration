@@ -12,7 +12,7 @@
  *   show_images: true
  *   show_controls: true      # search box, min. discount and sort in the card
  */
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.1.1";
 
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
