@@ -89,6 +89,7 @@ min_discount: 35          # alleen ≥ 35% korting
 sort: discount            # discount | saving | price | expiry | name
 group_by_store: true      # false = één grid over alle winkels
 max_items: 12             # per winkel, 0 = alles
+columns: 2                # producten per regel (1 of 2 = grotere plaatjes), 0 = zoveel als past
 show_images: true
 show_controls: true       # zoekveld, min. korting en sorteren in de card
 fonts:                    # tekst op de producttegels (zie hieronder)

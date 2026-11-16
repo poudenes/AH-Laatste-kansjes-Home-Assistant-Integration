@@ -12,6 +12,7 @@
  *   sort: discount           # discount | saving | price | expiry | name
  *   group_by_store: true     # false = one grid over all stores
  *   max_items: 0             # per store (0 = all)
+ *   columns: 0               # products per row, e.g. 1 or 2 (bigger pictures); 0 = as many as fit
  *   show_images: true
  *   show_controls: true      # search box, min. discount and sort in the card
  *   fonts:                   # text on the product tiles; a number is a size in em, or give an object
@@ -21,7 +22,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.6";
+const CARD_VERSION = "0.1.7";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -74,6 +75,15 @@ function fontCss(fonts) {
   return css;
 }
 
+// Card option `columns`: a fixed number of products per row; the pictures grow with the tiles.
+function columnsCss(columns) {
+  const n = Math.floor(Number(columns));
+  if (!(n >= 1)) return "";
+  return `.grid { grid-template-columns: repeat(${Math.min(n, 12)}, minmax(0, 1fr)); }
+        .img { height: auto; aspect-ratio: 1 / 1; max-height: 360px; }
+        .img img { width: 100%; height: 100%; }`;
+}
+
 function saving(i) {
   return Math.max(0, (i.was || 0) - (i.price || 0));
 }
@@ -86,6 +96,7 @@ class AHLaatsteKansCard extends HTMLElement {
       sort: "discount",
       group_by_store: true,
       max_items: 0,
+      columns: 0,
       show_images: true,
       show_controls: true,
       ...(config || {}),
@@ -243,6 +254,7 @@ class AHLaatsteKansCard extends HTMLElement {
         .row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.9em; color: var(--secondary-text-color); }
         .urgent { color: var(--error-color, #d32f2f); font-weight: 600; }
         .stock { background: var(--divider-color); border-radius: 999px; padding: 1px 6px; font-weight: 700; color: var(--primary-text-color); }
+        ${columnsCss(c.columns)}
         ${fontCss(c.fonts)}
         .empty { padding: 16px; color: var(--secondary-text-color); text-align: center; }
       </style>
