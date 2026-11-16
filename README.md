@@ -14,12 +14,13 @@ met een eigen dashboard-card.
 | `sensor.ah_<straat>_<nr>_<plaats>_laatste_kans` (één per winkel, elk een eigen apparaat) | aantal producten | `items` (titel, merk, prijs, oude prijs, korting, voorraad, THT, plaatje, link), `best_discount`, `categories`, adres |
 | `sensor.ah_laatste_kans_laatste_kans_totaal` (of `_total`) | totaal over alle winkels | `top`: de 10 beste deals |
 | `sensor.ah_laatste_kans_laatste_kans_volglijst` (of `_watchlist`) | aantal treffers op je volglijst | `keywords`, `matches` |
+| `select.ah_laatste_kans_laatste_kans_winkel` (of `_store`) | gekozen winkel voor de card | `options`: *Alle winkels* + je winkels |
 
 En een **event** `ah_laatste_kans_new_bargain` voor elk product dat er sinds de vorige update bij is gekomen.
 Producten op je volglijst geven ook één keer een event als ze er al lagen, bijvoorbeeld meteen nadat je de
 volglijst hebt opgeslagen. Daarna niet meer, ook niet na een herstart.
 
-De Engelse namen (`_total`, `_watchlist`) krijg je als Home Assistant in het Engels stond toen je de integratie
+De Engelse namen (`_total`, `_watchlist`, `_store`) krijg je als Home Assistant in het Engels stond toen je de integratie
 installeerde.
 
 **Waarom één sensor per winkel (en niet per product)?** Laatste Kans-producten wisselen dagelijks. Sensoren per
@@ -78,8 +79,12 @@ De card wordt automatisch geladen. Voeg hem toe via *Dashboard › Kaart toevoeg
 type: custom:ah-laatste-kans-card
 # alles optioneel:
 title: Laatste Kansjes
-entities:                 # standaard: alle winkels van de integratie
-  - sensor.ah_vondellaan_200_utrecht_laatste_kans
+stores:                   # winkels op (een deel van) hun naam; standaard: alle winkels van de integratie
+  - Vondellaan
+  - Kanaalweg
+# entities:               # of op sensor, zoals vroeger
+#   - sensor.ah_vondellaan_200_utrecht_laatste_kans
+store_select: true        # keuzemenu om één winkel te tonen (zie hieronder)
 min_discount: 35          # alleen ≥ 35% korting
 sort: discount            # discount | saving | price | expiry | name
 group_by_store: true      # false = één grid over alle winkels
@@ -89,6 +94,17 @@ show_controls: true       # zoekveld, min. korting en sorteren in de card
 ```
 
 Klik op een product om het op ah.nl te openen.
+
+### Eén card, winkel kiezen
+
+Met `store_select: true` krijgt de card bovenin een keuzemenu: *Alle winkels* of één winkel. Het menu hoort bij de
+entiteit `select.ah_laatste_kans_laatste_kans_winkel`, die de integratie zelf aanmaakt. Zet je in de opties een winkel
+aan of uit, dan past de lijst zich vanzelf aan. Je keuze blijft bewaard, ook na een herstart.
+
+Omdat het een gewone entiteit is, kun je de winkel ook kiezen vanuit een andere card, een automation of een script
+(`select.select_option`). Let op: de keuze geldt voor iedereen en voor elk dashboard met `store_select`.
+
+Heb je meer dan één AH-account toegevoegd? Geef dan de entiteit zelf op: `store_select: select.…`.
 
 ## Pushmelding bij een kansje op je volglijst
 

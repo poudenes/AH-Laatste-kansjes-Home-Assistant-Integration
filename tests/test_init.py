@@ -316,3 +316,38 @@ async def test_one_store_failing_keeps_others(hass: HomeAssistant, mock_api) -> 
     assert st.state == "1"  # last known list
     assert st.attributes["error"]
     assert hass.states.get("sensor.ah_vondellaan_200_utrecht_laatste_kans").state == "2"
+
+
+# ---------- store choice (select entity) ----------
+
+SELECT = "select.ah_laatste_kans_laatste_kans_store"
+
+
+async def test_store_select_follows_options(hass: HomeAssistant, mock_api) -> None:
+    entry = make_entry()
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get(SELECT)
+    assert state.state == "Alle winkels"
+    assert state.attributes["options"] == ["Alle winkels", "AH Vondellaan 200, Utrecht", "AH Kanaalweg 1, Utrecht"]
+
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": SELECT, "option": "AH Kanaalweg 1, Utrecht"}, blocking=True
+    )
+    assert hass.states.get(SELECT).state == "AH Kanaalweg 1, Utrecht"
+
+    # The choice survives a reload.
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get(SELECT).state == "AH Kanaalweg 1, Utrecht"
+
+    # Switching that store off removes it from the list and falls back to all stores.
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "stores"})
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"stores": ["1868"]})
+    await hass.async_block_till_done()
+    state = hass.states.get(SELECT)
+    assert state.attributes["options"] == ["Alle winkels", "AH Vondellaan 200, Utrecht"]
+    assert state.state == "Alle winkels"
