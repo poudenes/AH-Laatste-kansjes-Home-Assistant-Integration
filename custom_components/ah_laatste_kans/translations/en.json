@@ -96,6 +96,11 @@
       "volglijst": {
         "name": "Laatste Kans watchlist"
       }
+    },
+    "select": {
+      "winkel": {
+        "name": "Laatste Kans store"
+      }
     }
   }
 }

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ah_laatste_kans"
-VERSION = "0.1.3"
+VERSION = "0.1.4"
 
 CONF_COUNTRY = "country"
 CONF_TOKENS = "tokens"
@@ -23,6 +23,9 @@ MIN_SCAN_INTERVAL = 15
 EVENT_NEW_BARGAIN = f"{DOMAIN}_new_bargain"
 
 CARD_URL = f"/{DOMAIN}/ah-laatste-kans-card.js"
+
+# First option of the store choice (select entity): show every store.
+ALL_STORES = "Alle winkels"
 
 COUNTRIES: dict[str, dict[str, str]] = {
     "NL": {

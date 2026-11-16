@@ -93,18 +93,23 @@ class AHStoreSensor(AHBaseSensor):
         }
 
 
+def hub_device_info(entry_id: str) -> DeviceInfo:
+    """The 'AH Laatste Kans' device that holds the total, the watchlist and the store choice."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"{entry_id}_hub")},
+        name="AH Laatste Kans",
+        manufacturer="Albert Heijn",
+        model="Laatste Kans",
+        entry_type=DeviceEntryType.SERVICE,
+    )
+
+
 class AHHubSensor(AHBaseSensor):
     def __init__(self, coordinator: AHCoordinator, key: str) -> None:
         super().__init__(coordinator)
         entry_id = coordinator.config_entry.entry_id
         self._attr_unique_id = f"{entry_id}_{key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{entry_id}_hub")},
-            name="AH Laatste Kans",
-            manufacturer="Albert Heijn",
-            model="Laatste Kans",
-            entry_type=DeviceEntryType.SERVICE,
-        )
+        self._attr_device_info = hub_device_info(entry_id)
 
 
 class AHTotalSensor(AHHubSensor):

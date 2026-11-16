@@ -96,6 +96,11 @@
       "volglijst": {
         "name": "Laatste Kans volglijst"
       }
+    },
+    "select": {
+      "winkel": {
+        "name": "Laatste Kans winkel"
+      }
     }
   }
 }
