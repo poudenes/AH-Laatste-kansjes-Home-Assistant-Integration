@@ -14,8 +14,14 @@
  *   max_items: 0             # per store (0 = all)
  *   show_images: true
  *   show_controls: true      # search box, min. discount and sort in the card
+ *   fonts:                   # text on the product tiles; a number is a size in em, or give an object
+ *     article: 1.1           # product name
+ *     brand: 14px            # brand and content/weight
+ *     price: 0.9             # original (struck-through) price
+ *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
+ *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.5";
+const CARD_VERSION = "0.1.6";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -44,6 +50,30 @@ const SORTS = {
   expiry: { label: "Eerst verlopen", fn: (a, b) => String(a.expires || "9999").localeCompare(String(b.expires || "9999")) },
   name: { label: "Naam", fn: (a, b) => String(a.title).localeCompare(String(b.title), "nl") },
 };
+// Card option `fonts`: which element each key styles.
+const FONT_PARTS = { article: ".t", brand: ".brand", price: ".was", discount: ".now", amount: ".stock" };
+// Only plain CSS values: no ; { } < > that could break out of the rule.
+const cssValue = (v) => String(v).replace(/[;{}<>\\]/g, "").trim();
+const cssSize = (v) => (typeof v === "number" || /^\d+(\.\d+)?$/.test(String(v).trim()) ? `${Number(v)}em` : cssValue(v));
+
+function fontCss(fonts) {
+  if (!fonts || typeof fonts !== "object") return "";
+  let css = "";
+  for (const [key, selector] of Object.entries(FONT_PARTS)) {
+    let f = fonts[key];
+    if (f === undefined || f === null || f === "") continue;
+    if (typeof f !== "object") f = { size: f };
+    const rules = [];
+    if (f.size !== undefined && f.size !== "") rules.push(`font-size: ${cssSize(f.size)}`);
+    if (f.weight !== undefined && f.weight !== "") rules.push(`font-weight: ${cssValue(f.weight)}`);
+    if (f.family) rules.push(`font-family: ${cssValue(f.family)}`);
+    if (f.style) rules.push(`font-style: ${cssValue(f.style)}`);
+    if (f.color) rules.push(`color: ${cssValue(f.color)}`);
+    if (rules.length) css += `.item ${selector} { ${rules.join("; ")}; }\n`;
+  }
+  return css;
+}
+
 function saving(i) {
   return Math.max(0, (i.was || 0) - (i.price || 0));
 }
@@ -213,6 +243,7 @@ class AHLaatsteKansCard extends HTMLElement {
         .row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.9em; color: var(--secondary-text-color); }
         .urgent { color: var(--error-color, #d32f2f); font-weight: 600; }
         .stock { background: var(--divider-color); border-radius: 999px; padding: 1px 6px; font-weight: 700; color: var(--primary-text-color); }
+        ${fontCss(c.fonts)}
         .empty { padding: 16px; color: var(--secondary-text-color); text-align: center; }
       </style>
       <ha-card>
@@ -267,7 +298,7 @@ class AHLaatsteKansCard extends HTMLElement {
       ${img}
       <span class="sticker${i.discount >= 50 ? " hot" : ""}">-${esc(i.discount)}%</span>
       <div class="t">${esc(i.title)}</div>
-      <div class="muted">${esc([i.brand, i.unit].filter(Boolean).join(" · "))}</div>
+      <div class="muted brand">${esc([i.brand, i.unit].filter(Boolean).join(" · "))}</div>
       <div class="prices">${i.was ? `<span class="was">${euro(i.was)}</span>` : ""}<span class="now">${euro(i.price)}</span></div>
       <div class="row"><span class="${exp.urgent ? "urgent" : ""}">${esc(exp.text)}</span>${i.stock ? `<span class="stock">×${esc(i.stock)}</span>` : ""}</div>
       ${storeName ? `<div class="muted">${esc(storeName)}</div>` : ""}
