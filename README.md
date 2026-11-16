@@ -89,13 +89,22 @@ min_discount: 35          # alleen ≥ 35% korting
 sort: discount            # discount | saving | price | expiry | name
 group_by_store: true      # false = één grid over alle winkels
 max_items: 12             # per winkel, 0 = alles
-columns: 2                # producten per regel (1 of 2 = grotere plaatjes), 0 = zoveel als past
+tile_width: 200           # minimale breedte van een product (px): zoveel per regel als past, op elk scherm
+image_size: 160           # hoogte van de plaatjes (px), standaard 96
+# columns: 2              # of een vast aantal per regel (plaatjes groeien mee); tile_width gaat voor
 show_images: true
 show_controls: true       # zoekveld, min. korting en sorteren in de card
 fonts:                    # tekst op de producttegels (zie hieronder)
   article: 1.1
   discount: { size: 1.4, color: "#e00000" }
 ```
+
+### Telefoon, tablet en groot scherm
+
+Met `tile_width` past de card zich vanzelf aan de ruimte aan: op een telefoon staan er 1 à 2 producten per regel, op
+een tablet 3 à 4 en in een brede *panel*-weergave 6 of meer. Met `image_size` blijft het plaatje overal even hoog,
+zodat de verhouding tussen tekst en plaatje niet verandert. `columns` geeft een vast aantal per regel, waarbij de
+plaatjes meegroeien met de breedte. Staan beide in je config, dan gaat `tile_width` voor.
 
 ### Lettertype per onderdeel
 

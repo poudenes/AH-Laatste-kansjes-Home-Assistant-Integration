@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ah_laatste_kans"
-VERSION = "0.1.7"
+VERSION = "0.1.8"
 
 CONF_COUNTRY = "country"
 CONF_TOKENS = "tokens"
