@@ -1,6 +1,7 @@
 {
   "domain": "ah_laatste_kans",
   "name": "AH Laatste Kans",
+  "categories": ["productivity_information.shopping_groceries"],
   "codeowners": ["@poudenes"],
   "config_flow": true,
   "dependencies": ["frontend", "http"],
