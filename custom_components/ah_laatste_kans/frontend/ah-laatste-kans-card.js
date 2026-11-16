@@ -13,6 +13,9 @@
  *   group_by_store: true     # false = one grid over all stores
  *   max_items: 0             # per store (0 = all)
  *   columns: 0               # products per row, e.g. 1 or 2 (bigger pictures); 0 = as many as fit
+ *   tile_width: 200          # minimum width of a product (px): as many per row as fit, on every screen
+ *                            # (wins over columns)
+ *   image_size: 160          # height of the pictures (px); default 96, or growing with columns
  *   show_images: true
  *   show_controls: true      # search box, min. discount and sort in the card
  *   fonts:                   # text on the product tiles; a number is a size in em, or give an object
@@ -22,7 +25,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.7";
+const CARD_VERSION = "0.1.8";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -82,6 +85,16 @@ function columnsCss(columns) {
   return `.grid { grid-template-columns: repeat(${Math.min(n, 12)}, minmax(0, 1fr)); }
         .img { height: auto; aspect-ratio: 1 / 1; max-height: 360px; }
         .img img { width: 100%; height: 100%; }`;
+}
+
+// Card options `tile_width` and `image_size`: a number is px, or any CSS size.
+const pxSize = (v) => (typeof v === "number" || /^\d+(\.\d+)?$/.test(String(v).trim()) ? `${Number(v)}px` : cssValue(v));
+
+function layoutCss(c) {
+  let css = "";
+  if (c.tile_width) css += `.grid { grid-template-columns: repeat(auto-fill, minmax(min(${pxSize(c.tile_width)}, 100%), 1fr)); }\n`;
+  if (c.image_size) css += `.img { height: ${pxSize(c.image_size)}; aspect-ratio: auto; max-height: none; }\n`;
+  return css;
 }
 
 function saving(i) {
@@ -254,7 +267,8 @@ class AHLaatsteKansCard extends HTMLElement {
         .row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.9em; color: var(--secondary-text-color); }
         .urgent { color: var(--error-color, #d32f2f); font-weight: 600; }
         .stock { background: var(--divider-color); border-radius: 999px; padding: 1px 6px; font-weight: 700; color: var(--primary-text-color); }
-        ${columnsCss(c.columns)}
+        ${columnsCss(c.tile_width ? 0 : c.columns)}
+        ${layoutCss(c)}
         ${fontCss(c.fonts)}
         .empty { padding: 16px; color: var(--secondary-text-color); text-align: center; }
       </style>
