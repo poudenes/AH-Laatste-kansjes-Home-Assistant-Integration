@@ -91,6 +91,31 @@ group_by_store: true      # false = één grid over alle winkels
 max_items: 12             # per winkel, 0 = alles
 show_images: true
 show_controls: true       # zoekveld, min. korting en sorteren in de card
+fonts:                    # tekst op de producttegels (zie hieronder)
+  article: 1.1
+  discount: { size: 1.4, color: "#e00000" }
+```
+
+### Lettertype per onderdeel
+
+Met `fonts` pas je de tekst op de producttegels aan. Een getal is de grootte in `em` (1 = normaal), maar `14px` mag
+ook. Wil je meer aanpassen, geef dan een object met `size`, `weight`, `family`, `style` en/of `color`.
+
+| Optie | Wat | Standaard |
+|---|---|---|
+| `article` | productnaam | `0.9` vet |
+| `brand` | merk en inhoud/gewicht | `0.85` |
+| `price` | originele (doorgestreepte) prijs | `0.8` |
+| `discount` | nieuwe prijs | `1.1` extra vet, oranje |
+| `amount` | aantal beschikbaar (`×3`) | `1` (t.o.v. de THT-regel) |
+
+```yaml
+fonts:
+  article: 1.1
+  brand: 14px
+  price: { size: 0.9, color: grey }
+  discount: { size: 1.4, weight: 900, color: "#e00000" }
+  amount: { size: 1.2, family: monospace }
 ```
 
 Klik op een product om het op ah.nl te openen.
