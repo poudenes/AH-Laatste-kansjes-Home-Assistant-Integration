@@ -104,7 +104,10 @@ aan of uit, dan past de lijst zich vanzelf aan. Je keuze blijft bewaard, ook na 
 Omdat het een gewone entiteit is, kun je de winkel ook kiezen vanuit een andere card, een automation of een script
 (`select.select_option`). Let op: de keuze geldt voor iedereen en voor elk dashboard met `store_select`.
 
-Heb je meer dan één AH-account toegevoegd? Geef dan de entiteit zelf op: `store_select: select.…`.
+Heb je meer dan één hub (bijvoorbeeld een tweede postcode)? Dan heeft elke hub een eigen select-entiteit
+(`…_winkel`, `…_winkel_2`). De card voegt ze samen tot één menu met de winkels van alle hubs. Kies je een winkel,
+dan gaat de select van de andere hubs op *Alle winkels*. Wil je maar één hub in het menu, geef dan de entiteit zelf
+op: `store_select: select.…` (of een lijst).
 
 ## Pushmelding bij een kansje op je volglijst
 

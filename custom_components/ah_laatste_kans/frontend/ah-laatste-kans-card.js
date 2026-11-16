@@ -6,8 +6,8 @@
  *   title: Laatste Kansjes
  *   stores: [Vondellaan, Kanaalweg]   # stores by (part of) their name; default: all stores of the integration
  *   entities: [sensor.ah_vondellaan_200_utrecht_laatste_kans]   # or by sensor, as before
- *   store_select: true       # dropdown to pick one store; follows the integration's select entity
- *                            # (or give its entity_id, e.g. select.ah_laatste_kans_laatste_kans_winkel)
+ *   store_select: true       # dropdown to pick one store; follows the select entities of every hub
+ *                            # (or give one entity_id or a list, e.g. select.ah_laatste_kans_laatste_kans_winkel)
  *   min_discount: 0          # only show products with at least this discount (%)
  *   sort: discount           # discount | saving | price | expiry | name
  *   group_by_store: true     # false = one grid over all stores
@@ -15,7 +15,7 @@
  *   show_images: true
  *   show_controls: true      # search box, min. discount and sort in the card
  */
-const CARD_VERSION = "0.1.4";
+const CARD_VERSION = "0.1.5";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -68,9 +68,8 @@ class AHLaatsteKansCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     if (!this._built) this._build();
-    const sel = this._selectEntity();
-    const sig = [...this._entities(), sel]
-      .map((id) => (id && hass.states[id] ? hass.states[id].last_updated : "x"))
+    const sig = [...this._entities(), ...this._selectEntities()]
+      .map((id) => (hass.states[id] ? hass.states[id].last_updated : "x"))
       .join("|");
     if (sig !== this._sig) {
       this._sig = sig;
@@ -109,20 +108,39 @@ class AHLaatsteKansCard extends HTMLElement {
     });
   }
 
-  // The select entity that picks one store, if the card follows one.
-  _selectEntity() {
+  // The select entities that pick one store: one per hub (AH account / postcode) of the integration.
+  _selectEntities() {
     const opt = this._config.store_select;
-    if (!opt || !this._hass) return null;
-    if (typeof opt === "string") return opt;
+    if (!opt || !this._hass) return [];
+    if (typeof opt === "string" || Array.isArray(opt)) return [].concat(opt).filter((id) => this._hass.states[id]);
     const reg = this._hass.entities || {};
-    return Object.keys(this._hass.states).find((id) => id.startsWith("select.") && reg[id]?.platform === "ah_laatste_kans") || null;
+    return Object.keys(this._hass.states)
+      .filter((id) => id.startsWith("select.") && reg[id]?.platform === "ah_laatste_kans")
+      .sort();
+  }
+
+  // The chosen store over all hubs: the first select that is not on 'Alle winkels'.
+  _choice() {
+    for (const id of this._selectEntities()) {
+      const state = this._hass.states[id].state;
+      if (state && state !== ALL_STORES && (this._hass.states[id].attributes.options || []).includes(state)) return state;
+    }
+    return ALL_STORES;
+  }
+
+  // Pick a store in the select of its own hub, and put the other hubs on 'Alle winkels'.
+  _choose(option) {
+    for (const id of this._selectEntities()) {
+      const st = this._hass.states[id];
+      const target = option !== ALL_STORES && (st.attributes.options || []).includes(option) ? option : ALL_STORES;
+      if (st.state !== target) this._hass.callService("select", "select_option", { entity_id: id, option: target });
+    }
   }
 
   // The stores to draw right now: the chosen one, or all of them.
   _shownStores() {
     const stores = this._entities().map((id) => this._hass.states[id]).filter(Boolean);
-    const sel = this._selectEntity();
-    const choice = sel && this._hass.states[sel] ? this._hass.states[sel].state : ALL_STORES;
+    const choice = this._choice();
     const chosen = stores.filter((st) => st.attributes.store === choice);
     // 'Alle winkels', or a store this card does not show: show all of this card's stores.
     return chosen.length ? chosen : stores;
@@ -131,17 +149,22 @@ class AHLaatsteKansCard extends HTMLElement {
   _renderStorePicker() {
     const picker = this._root.getElementById("store");
     if (!picker) return;
-    const sel = this._selectEntity();
-    const st = sel && this._hass.states[sel];
-    picker.hidden = !st;
-    if (!st) return;
-    // Only offer the stores this card may show.
+    const selects = this._selectEntities();
+    picker.hidden = !selects.length;
+    if (!selects.length) return;
+    // The stores of every hub, but only those this card may show.
     const allowed = new Set(this._entities().map((id) => this._hass.states[id]?.attributes.store));
-    const options = (st.attributes.options || []).filter((o) => o === ALL_STORES || allowed.has(o));
+    const options = [ALL_STORES];
+    for (const id of selects) {
+      for (const o of this._hass.states[id].attributes.options || []) {
+        if (o !== ALL_STORES && allowed.has(o) && !options.includes(o)) options.push(o);
+      }
+    }
     const html = options.map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join("");
     if (picker.innerHTML !== html) picker.innerHTML = html;
     // A store this card does not show counts as 'Alle winkels' (see _shownStores).
-    picker.value = options.includes(st.state) ? st.state : ALL_STORES;
+    const choice = this._choice();
+    picker.value = options.includes(choice) ? choice : ALL_STORES;
   }
 
   _build() {
@@ -208,10 +231,7 @@ class AHLaatsteKansCard extends HTMLElement {
     this._root = root;
     const picker = root.getElementById("store");
     if (picker) {
-      picker.addEventListener("change", () => {
-        const sel = this._selectEntity();
-        if (sel) this._hass.callService("select", "select_option", { entity_id: sel, option: picker.value });
-      });
+      picker.addEventListener("change", () => this._choose(picker.value));
     }
     if (c.show_controls) {
       const q = root.getElementById("q");
