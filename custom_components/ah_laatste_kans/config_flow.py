@@ -21,6 +21,8 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    EntitySelector,
+    EntitySelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -41,6 +43,7 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_STORE_COUNT,
     CONF_STORES,
+    CONF_TODO_LIST,
     CONF_TOKENS,
     COUNTRIES,
     DEFAULT_COUNTRY,
@@ -280,6 +283,7 @@ class AHOptionsFlow(OptionsFlow):
                 **{
                     CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL]),
                     CONF_KEYWORDS: user_input.get(CONF_KEYWORDS, ""),
+                    CONF_TODO_LIST: user_input.get(CONF_TODO_LIST) or "",
                 }
             )
         options = self.config_entry.options
@@ -298,6 +302,10 @@ class AHOptionsFlow(OptionsFlow):
                     vol.Optional(CONF_KEYWORDS, default=options.get(CONF_KEYWORDS, "")): TextSelector(
                         TextSelectorConfig(multiline=True)
                     ),
+                    # Suggested (not default), so the field can be emptied again.
+                    vol.Optional(
+                        CONF_TODO_LIST, description={"suggested_value": options.get(CONF_TODO_LIST) or None}
+                    ): EntitySelector(EntitySelectorConfig(domain="todo")),
                 }
             ),
         )

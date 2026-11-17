@@ -69,7 +69,8 @@ Daarna vul je je **postcode** in en vink je de **winkels** aan.
 **Integratie › Configureren:**
 - **Winkels aan- of uitzetten:** uitgevinkte winkels verdwijnen met hun apparaat en sensor.
 - **Winkels zoeken bij een (andere) postcode:** de nieuwe winkels komen erbij in de lijst.
-- **Verversen en volglijst:** interval (minimaal 15 minuten) en zoekwoorden, gescheiden door komma's.
+- **Verversen en volglijst:** interval (minimaal 15 minuten), zoekwoorden gescheiden door komma's, en de
+  **boodschappenlijst** voor het winkelwagentje op de card (elke todo-lijst, bijv. de Boodschappenlijst van HA).
 
 ## De card
 
@@ -94,6 +95,7 @@ image_size: 160           # hoogte van de plaatjes (px), standaard 96
 # columns: 2              # of een vast aantal per regel (plaatjes groeien mee); tile_width gaat voor
 show_images: true
 show_controls: true       # zoekveld, min. korting en sorteren in de card
+cart: true                # winkelwagentje op elk product (zie hieronder)
 fonts:                    # tekst op de producttegels (zie hieronder)
   article: 1.1
   discount: { size: 1.4, color: "#e00000" }
@@ -143,6 +145,20 @@ Heb je meer dan één hub (bijvoorbeeld een tweede postcode)? Dan heeft elke hub
 (`…_winkel`, `…_winkel_2`). De card voegt ze samen tot één menu met de winkels van alle hubs. Kies je een winkel,
 dan gaat de select van de andere hubs op *Alle winkels*. Wil je maar één hub in het menu, geef dan de entiteit zelf
 op: `store_select: select.…` (of een lijst).
+
+### Winkelwagentje: op je boodschappenlijst
+
+Kies bij *Integratie › Configureren › Verversen en volglijst* een **boodschappenlijst** (een todo-lijst). Op elk
+product in de card staat dan linksboven een winkelwagentje. Tik erop en het product komt op die lijst als
+
+```
+Koopjes (40%) AH Zalmfilet
+```
+
+Zo heb je in de winkel de lijst bij de hand en weet je welke korting erbij hoort. Kan de lijst een omschrijving
+bewaren (zoals Local To-do), dan komen daar ook merk, prijs, winkel en THT in. Het wagentje wordt groen met een
+vinkje zodra het product erop staat. Geen lijst gekozen, of `cart: false`? Dan is er geen wagentje.
+Heb je meer hubs, dan gebruikt elk product de lijst van zijn eigen hub.
 
 ## Pushmelding bij een kansje op je volglijst
 

@@ -18,6 +18,8 @@
  *   image_size: 160          # height of the pictures (px); default 96, or growing with columns
  *   show_images: true
  *   show_controls: true      # search box, min. discount and sort in the card
+ *   cart: true               # cart button: adds "Koopjes (40%) product" to the todo list chosen
+ *                            # in the integration settings (hidden when no list is chosen)
  *   fonts:                   # text on the product tiles; a number is a size in em, or give an object
  *     article: 1.1           # product name
  *     brand: 14px            # brand and content/weight
@@ -25,7 +27,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.8";
+const CARD_VERSION = "0.1.9";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -112,11 +114,14 @@ class AHLaatsteKansCard extends HTMLElement {
       columns: 0,
       show_images: true,
       show_controls: true,
+      cart: true,
       ...(config || {}),
     };
     this._ui = { text: "", min: Number(this._config.min_discount) || 0, sort: SORTS[this._config.sort] ? this._config.sort : "discount" };
     this._built = false;
     this._sig = null;
+    this._cart = [];          // products behind the cart buttons, by index
+    this._added = new Set();  // added in this session: button stays ticked
   }
 
   set hass(hass) {
@@ -266,6 +271,14 @@ class AHLaatsteKansCard extends HTMLElement {
         .now { font-weight: 800; color: #f08a24; font-size: 1.1em; }
         .row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.9em; color: var(--secondary-text-color); }
         .urgent { color: var(--error-color, #d32f2f); font-weight: 600; }
+        .cart {
+          position: absolute; top: 6px; left: 6px; z-index: 1; width: 34px; height: 34px; padding: 0; border: none; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+          background: var(--primary-color, #00a0e3); color: var(--text-primary-color, #fff); box-shadow: 0 1px 3px rgba(0,0,0,.35);
+          --mdc-icon-size: 20px;
+        }
+        .cart.done { background: var(--success-color, #43a047); }
+        .cart[disabled] { opacity: 0.6; cursor: default; }
         .stock { background: var(--divider-color); border-radius: 999px; padding: 1px 6px; font-weight: 700; color: var(--primary-text-color); }
         ${columnsCss(c.tile_width ? 0 : c.columns)}
         ${layoutCss(c)}
@@ -286,6 +299,13 @@ class AHLaatsteKansCard extends HTMLElement {
         <div id="list"></div>
       </ha-card>`;
     this._root = root;
+    root.getElementById("list").addEventListener("click", (ev) => {
+      const btn = ev.target.closest && ev.target.closest(".cart");
+      if (!btn) return;
+      ev.preventDefault();  // the tile is a link to ah.nl
+      ev.stopPropagation();
+      this._addToList(btn);
+    });
     const picker = root.getElementById("store");
     if (picker) {
       picker.addEventListener("change", () => this._choose(picker.value));
@@ -313,6 +333,45 @@ class AHLaatsteKansCard extends HTMLElement {
       .sort(SORTS[this._ui.sort].fn);
   }
 
+  _cartKey(i, todo) {
+    return `${todo}|${i._store_id}|${i.product_id}|${i.expires}|${i.discount}`;
+  }
+
+  async _addToList(btn) {
+    const entry = this._cart[Number(btn.dataset.i)];
+    if (!entry || btn.disabled) return;
+    const { item: i, todo } = entry;
+    const name = `Koopjes (${i.discount}%) ${i.title}`;
+    const data = { entity_id: todo, item: name };
+    // Price, store and date as the item's description, when the list supports that (64 = SET_DESCRIPTION_ON_ITEM).
+    const features = this._hass.states[todo]?.attributes.supported_features || 0;
+    if (features & 64) {
+      const exp = expiryInfo(i.expires).text;
+      data.description = [
+        [i.brand, i.unit].filter(Boolean).join(" · "),
+        `${euro(i.price)}${i.was ? ` (was ${euro(i.was)})` : ""}`,
+        i._store_name,
+        exp,
+      ].filter(Boolean).join("\n");
+    }
+    btn.disabled = true;
+    try {
+      await this._hass.callService("todo", "add_item", data);
+      this._added.add(this._cartKey(i, todo));
+      btn.classList.add("done");
+      btn.querySelector("ha-icon").setAttribute("icon", "mdi:cart-check");
+      btn.title = "Staat op je lijst";
+      this._toast(`Op de lijst: ${name}`);
+    } catch (err) {
+      btn.disabled = false;
+      this._toast(`Toevoegen mislukt: ${err.message || err}`);
+    }
+  }
+
+  _toast(message) {
+    this.dispatchEvent(new CustomEvent("hass-notification", { detail: { message }, bubbles: true, composed: true }));
+  }
+
   _itemHtml(i, storeName) {
     const exp = expiryInfo(i.expires);
     const img = this._config.show_images
@@ -322,6 +381,7 @@ class AHLaatsteKansCard extends HTMLElement {
     const href = i.url ? ` href="${esc(i.url)}" target="_blank" rel="noreferrer"` : "";
     return `<${tag} class="item"${href} title="${esc(i.title)}${i.unit ? " · " + esc(i.unit) : ""}">
       ${img}
+      ${this._cartHtml(i)}
       <span class="sticker${i.discount >= 50 ? " hot" : ""}">-${esc(i.discount)}%</span>
       <div class="t">${esc(i.title)}</div>
       <div class="muted brand">${esc([i.brand, i.unit].filter(Boolean).join(" · "))}</div>
@@ -331,8 +391,18 @@ class AHLaatsteKansCard extends HTMLElement {
     </${tag}>`;
   }
 
+  _cartHtml(i) {
+    const todo = i._todo;
+    if (!this._config.cart || !todo || !this._hass.states[todo]) return "";
+    const done = this._added.has(this._cartKey(i, todo));
+    this._cart.push({ item: i, todo });
+    return `<button class="cart${done ? " done" : ""}" data-i="${this._cart.length - 1}"${done ? " disabled" : ""}
+      title="${done ? "Staat op je lijst" : "Op de boodschappenlijst"}"><ha-icon icon="mdi:cart-${done ? "check" : "plus"}"></ha-icon></button>`;
+  }
+
   _renderList() {
     if (!this._root || !this._hass) return;
+    this._cart = [];
     const list = this._root.getElementById("list");
     this._renderStorePicker();
     const stores = this._shownStores();
@@ -347,7 +417,8 @@ class AHLaatsteKansCard extends HTMLElement {
     if (this._config.group_by_store) {
       for (const st of stores) {
         const a = st.attributes;
-        let items = this._filter(a.items || []);
+        const extra = { _store: a.store, _store_name: a.store, _store_id: a.store_id, _todo: a.todo_list };
+        let items = this._filter((a.items || []).map((i) => ({ ...i, ...extra })));
         total += items.length;
         if (max) items = items.slice(0, max);
         html += `<div class="store">
@@ -358,7 +429,7 @@ class AHLaatsteKansCard extends HTMLElement {
       }
     } else {
       let all = [];
-      for (const st of stores) for (const i of st.attributes.items || []) all.push({ ...i, _store: st.attributes.store });
+      for (const st of stores) for (const i of st.attributes.items || []) all.push({ ...i, _store: st.attributes.store, _store_name: st.attributes.store, _store_id: st.attributes.store_id, _todo: st.attributes.todo_list });
       all = this._filter(all);
       total = all.length;
       if (max) all = all.slice(0, max);

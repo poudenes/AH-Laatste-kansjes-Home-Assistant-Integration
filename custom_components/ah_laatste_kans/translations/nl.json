@@ -74,7 +74,11 @@
         "description": "Volglijst: zoekwoorden gescheiden door komma's (bijv. `zalm, Ben & Jerry, kaas`). Treffers staan in de volglijst-sensor en in het event `ah_laatste_kans_new_bargain` (`watched: true`).",
         "data": {
           "scan_interval": "Verversen elke",
-          "keywords": "Volglijst"
+          "keywords": "Volglijst",
+          "todo_list": "Boodschappenlijst"
+        },
+        "data_description": {
+          "todo_list": "Het winkelwagentje op de card zet het product hierop als \"Koopjes (40%) productnaam\"."
         }
       }
     },
