@@ -265,6 +265,24 @@ async def test_options_settings(hass: HomeAssistant, mock_api) -> None:
     assert entry.options["scan_interval"] == 60
     assert entry.runtime_data.update_interval == timedelta(minutes=60)
     assert hass.states.get("sensor.ah_laatste_kans_laatste_kans_watchlist").state == "1"
+    store = "sensor.ah_vondellaan_200_utrecht_laatste_kans"
+    assert hass.states.get(store).attributes["todo_list"] is None
+
+    # The todo list for the card's cart button; it can be emptied again.
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "settings"})
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"scan_interval": 60, "todo_list": "todo.boodschappen"}
+    )
+    await hass.async_block_till_done()
+    assert entry.options["todo_list"] == "todo.boodschappen"
+    assert hass.states.get(store).attributes["todo_list"] == "todo.boodschappen"
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "settings"})
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"scan_interval": 60})
+    await hass.async_block_till_done()
+    assert hass.states.get(store).attributes["todo_list"] is None
 
 
 # ---------- token refresh does not reload; auth failure starts reauth ----------

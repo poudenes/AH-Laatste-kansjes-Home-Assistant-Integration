@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ah_laatste_kans"
-VERSION = "0.1.8"
+VERSION = "0.1.9"
 
 CONF_COUNTRY = "country"
 CONF_TOKENS = "tokens"
@@ -13,6 +13,7 @@ CONF_STORE_COUNT = "store_count"
 CONF_STORES = "stores"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_KEYWORDS = "keywords"
+CONF_TODO_LIST = "todo_list"
 
 DEFAULT_COUNTRY = "NL"
 DEFAULT_STORE_COUNT = 5

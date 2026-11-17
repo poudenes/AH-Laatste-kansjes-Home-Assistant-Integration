@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import store_label
-from .const import CONF_KEYWORDS, CONF_STORES, DOMAIN
+from .const import CONF_KEYWORDS, CONF_STORES, CONF_TODO_LIST, DOMAIN
 from .coordinator import AHConfigEntry, AHCoordinator, parse_keywords
 
 ATTRIBUTION = "Gegevens van Albert Heijn (onofficiële API)"
@@ -88,6 +88,8 @@ class AHStoreSensor(AHBaseSensor):
             "best_discount": max((i["discount"] for i in items), default=0),
             "updated": (self.coordinator.data or {}).get("updated"),
             "error": self._data.get("error"),
+            # Todo list chosen in the settings: the card's cart button adds products to it.
+            "todo_list": self.coordinator.config_entry.options.get(CONF_TODO_LIST) or None,
             "categories": sorted({i["category"] for i in items}),
             "items": items,
         }

@@ -74,7 +74,11 @@
         "description": "Watchlist: keywords separated by commas (e.g. `salmon, Ben & Jerry, cheese`). Matches appear in the watchlist sensor and in the `ah_laatste_kans_new_bargain` event (`watched: true`).",
         "data": {
           "scan_interval": "Refresh every",
-          "keywords": "Watchlist"
+          "keywords": "Watchlist",
+          "todo_list": "Shopping list"
+        },
+        "data_description": {
+          "todo_list": "The cart button on the card adds the product here as \"Koopjes (40%) product name\"."
         }
       }
     },
