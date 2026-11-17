@@ -157,7 +157,11 @@ Koopjes (40%) AH Zalmfilet
 
 Zo heb je in de winkel de lijst bij de hand en weet je welke korting erbij hoort. Kan de lijst een omschrijving
 bewaren (zoals Local To-do), dan komen daar ook merk, prijs, winkel en THT in. Het wagentje wordt groen met een
-vinkje zodra het product erop staat. Geen lijst gekozen, of `cart: false`? Dan is er geen wagentje.
+vinkje zodra het product erop staat. Tik je nog een keer, dan gaat het product weer van de lijst.
+
+De card kijkt in de lijst zelf: staat het product erop (nog niet afgevinkt), dan is het wagentje groen, ook na
+verversen of op een ander apparaat. Vink je het af of haal je het weg in de lijst, dan wordt het wagentje weer blauw.
+Geen lijst gekozen, of `cart: false`? Dan is er geen wagentje.
 Heb je meer hubs, dan gebruikt elk product de lijst van zijn eigen hub.
 
 ## Pushmelding bij een kansje op je volglijst
