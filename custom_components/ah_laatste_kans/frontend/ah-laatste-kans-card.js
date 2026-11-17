@@ -27,7 +27,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.10";
+const CARD_VERSION = "0.1.11";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -276,11 +276,12 @@ class AHLaatsteKansCard extends HTMLElement {
           position: absolute; top: 8px; left: 8px; z-index: 1; width: 40px; height: 40px; padding: 0; border: none;
           border-radius: 8px 0 14px 0;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
-          background: var(--primary-color, #00a0e3); color: var(--text-primary-color, #fff);
-          --mdc-icon-size: 20px;
+          background: #0a7fd8; color: #fff;  /* fixed blue + white icon, independent of the theme */
+          --mdc-icon-size: 22px;
         }
-        .cart.done { background: var(--success-color, #43a047); }
-        .cart[disabled] { opacity: 0.6; cursor: default; }
+        .cart.done { background: #2e9d48; }
+        .cart[disabled] { cursor: default; }
+        .cart[disabled]:not(.done) { opacity: 0.6; }
         .stock { background: var(--divider-color); border-radius: 999px; padding: 1px 6px; font-weight: 700; color: var(--primary-text-color); }
         ${columnsCss(c.tile_width ? 0 : c.columns)}
         ${layoutCss(c)}
