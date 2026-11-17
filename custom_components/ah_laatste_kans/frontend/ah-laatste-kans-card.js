@@ -18,7 +18,7 @@
  *   image_size: 160          # height of the pictures (px); default 96, or growing with columns
  *   show_images: true
  *   show_controls: true      # search box, min. discount and sort in the card
- *   cart: true               # cart button: adds "Koopjes (40%) product" to the todo list chosen
+ *   cart: true               # cart button: adds "Koopjes (40%) product" to the todo list chosen (tap again: removes it)
  *                            # in the integration settings (hidden when no list is chosen)
  *   fonts:                   # text on the product tiles; a number is a size in em, or give an object
  *     article: 1.1           # product name
@@ -27,7 +27,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.11";
+const CARD_VERSION = "0.1.12";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -121,7 +121,8 @@ class AHLaatsteKansCard extends HTMLElement {
     this._built = false;
     this._sig = null;
     this._cart = [];          // products behind the cart buttons, by index
-    this._added = new Set();  // added in this session: button stays ticked
+    this._onList = new Map(); // todo entity -> names of open items on that list (button is ticked)
+    this._listsSig = null;
   }
 
   set hass(hass) {
@@ -134,6 +135,38 @@ class AHLaatsteKansCard extends HTMLElement {
       this._sig = sig;
       this._renderList();
     }
+    // The todo lists themselves: their state (open items) changes when something is added, ticked off or removed,
+    // also from another device or the todo panel.
+    const lists = this._todoLists();
+    const listsSig = lists.map((id) => `${id}:${hass.states[id]?.last_updated}`).join("|");
+    if (listsSig !== this._listsSig) {
+      this._listsSig = listsSig;
+      this._loadLists(lists);
+    }
+  }
+
+  _todoLists() {
+    if (!this._config.cart || !this._hass) return [];
+    const ids = this._entities().map((id) => this._hass.states[id]?.attributes.todo_list).filter((id) => id && this._hass.states[id]);
+    return [...new Set(ids)];
+  }
+
+  async _loadLists(lists) {
+    const run = (this._listsRun = (this._listsRun || 0) + 1);
+    const map = new Map();
+    await Promise.all(
+      lists.map(async (id) => {
+        try {
+          const res = await this._hass.callWS({ type: "todo/item/list", entity_id: id });
+          map.set(id, new Set((res.items || []).filter((t) => t.status !== "completed").map((t) => t.summary)));
+        } catch (err) {
+          map.set(id, this._onList.get(id) || new Set());
+        }
+      })
+    );
+    if (run !== this._listsRun) return;  // a newer load is under way
+    this._onList = map;
+    this._renderList();
   }
 
   getCardSize() {
@@ -280,8 +313,7 @@ class AHLaatsteKansCard extends HTMLElement {
           --mdc-icon-size: 22px;
         }
         .cart.done { background: #2e9d48; }
-        .cart[disabled] { cursor: default; }
-        .cart[disabled]:not(.done) { opacity: 0.6; }
+        .cart[disabled] { cursor: default; opacity: 0.6; }
         .stock { background: var(--divider-color); border-radius: 999px; padding: 1px 6px; font-weight: 700; color: var(--primary-text-color); }
         ${columnsCss(c.tile_width ? 0 : c.columns)}
         ${layoutCss(c)}
@@ -307,7 +339,7 @@ class AHLaatsteKansCard extends HTMLElement {
       if (!btn) return;
       ev.preventDefault();  // the tile is a link to ah.nl
       ev.stopPropagation();
-      this._addToList(btn);
+      this._toggleCart(btn);
     });
     const picker = root.getElementById("store");
     if (picker) {
@@ -336,15 +368,41 @@ class AHLaatsteKansCard extends HTMLElement {
       .sort(SORTS[this._ui.sort].fn);
   }
 
-  _cartKey(i, todo) {
-    return `${todo}|${i._store_id}|${i.product_id}|${i.expires}|${i.discount}`;
+  _listName(i) {
+    return `Koopjes (${i.discount}%) ${i.title}`;
   }
 
-  async _addToList(btn) {
+  _isOnList(i, todo) {
+    return !!this._onList.get(todo)?.has(this._listName(i));
+  }
+
+  _setCartButton(btn, done) {
+    btn.classList.toggle("done", done);
+    btn.querySelector("ha-icon").setAttribute("icon", done ? "mdi:cart-check" : "mdi:cart-plus");
+    btn.title = done ? "Staat op je lijst (tik om weg te halen)" : "Op de boodschappenlijst";
+  }
+
+  // First tap: on the todo list. Tap again: off the list.
+  async _toggleCart(btn) {
     const entry = this._cart[Number(btn.dataset.i)];
     if (!entry || btn.disabled) return;
     const { item: i, todo } = entry;
-    const name = `Koopjes (${i.discount}%) ${i.title}`;
+    const name = this._listName(i);
+    if (!this._onList.has(todo)) this._onList.set(todo, new Set());
+    const names = this._onList.get(todo);
+    btn.disabled = true;
+    if (names.has(name)) {
+      try {
+        await this._hass.callService("todo", "remove_item", { entity_id: todo, item: name });
+        names.delete(name);
+        this._setCartButton(btn, false);
+        this._toast(`Van de lijst gehaald: ${name}`);
+      } catch (err) {
+        this._toast(`Weghalen mislukt: ${err.message || err}`);
+      }
+      btn.disabled = false;
+      return;
+    }
     const data = { entity_id: todo, item: name };
     // Price, store and date as the item's description, when the list supports that (64 = SET_DESCRIPTION_ON_ITEM).
     const features = this._hass.states[todo]?.attributes.supported_features || 0;
@@ -357,18 +415,15 @@ class AHLaatsteKansCard extends HTMLElement {
         exp,
       ].filter(Boolean).join("\n");
     }
-    btn.disabled = true;
     try {
       await this._hass.callService("todo", "add_item", data);
-      this._added.add(this._cartKey(i, todo));
-      btn.classList.add("done");
-      btn.querySelector("ha-icon").setAttribute("icon", "mdi:cart-check");
-      btn.title = "Staat op je lijst";
+      names.add(name);
+      this._setCartButton(btn, true);
       this._toast(`Op de lijst: ${name}`);
     } catch (err) {
-      btn.disabled = false;
       this._toast(`Toevoegen mislukt: ${err.message || err}`);
     }
+    btn.disabled = false;
   }
 
   _toast(message) {
@@ -397,10 +452,10 @@ class AHLaatsteKansCard extends HTMLElement {
   _cartHtml(i) {
     const todo = i._todo;
     if (!this._config.cart || !todo || !this._hass.states[todo]) return "";
-    const done = this._added.has(this._cartKey(i, todo));
+    const done = this._isOnList(i, todo);
     this._cart.push({ item: i, todo });
-    return `<button class="cart${done ? " done" : ""}" data-i="${this._cart.length - 1}"${done ? " disabled" : ""}
-      title="${done ? "Staat op je lijst" : "Op de boodschappenlijst"}"><ha-icon icon="mdi:cart-${done ? "check" : "plus"}"></ha-icon></button>`;
+    return `<button class="cart${done ? " done" : ""}" data-i="${this._cart.length - 1}"
+      title="${done ? "Staat op je lijst (tik om weg te halen)" : "Op de boodschappenlijst"}"><ha-icon icon="mdi:cart-${done ? "check" : "plus"}"></ha-icon></button>`;
   }
 
   _renderList() {
