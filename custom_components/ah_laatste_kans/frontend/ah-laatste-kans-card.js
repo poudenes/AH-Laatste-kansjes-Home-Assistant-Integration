@@ -31,7 +31,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.18";
+const CARD_VERSION = "0.1.19";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -267,7 +267,7 @@ class AHLaatsteKansCard extends HTMLElement {
     const picker = this._root.getElementById("store");
     if (!picker) return;
     const selects = this._selectEntities();
-    picker.hidden = !selects.length;
+    this._root.getElementById("storeField").hidden = !selects.length;
     if (!selects.length) return;
     // The stores of every hub, but only those this card may show.
     const allowed = new Set(this._entities().map((id) => this._hass.states[id]?.attributes.store));
@@ -294,10 +294,10 @@ class AHLaatsteKansCard extends HTMLElement {
         ha-card { overflow: hidden; }
         .head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px 4px; }
         .title { font-size: 1.25em; font-weight: 600; flex: 1 1 auto; }
-        .picker {
-          font: inherit; color: var(--primary-text-color); background: var(--card-background-color);
-          border: 1px solid var(--divider-color); border-radius: 8px; padding: 6px 8px; max-width: 100%;
-        }
+        /* Store choice: the same kind of labelled box as the filters; the count next to it in the same size. */
+        .head .store-field { flex: 0 1 300px; min-width: 200px; }
+        .head .count { font-size: 1em; color: var(--secondary-text-color); white-space: nowrap; }
+        [hidden] { display: none !important; }
         /* Filter bar: a round search bar, below it four boxes with a small label (2 per row on a phone). */
         .controls { container-type: inline-size; display: flex; flex-direction: column; gap: 10px; padding: 4px 16px 12px; }
         .controls .search {
@@ -309,19 +309,19 @@ class AHLaatsteKansCard extends HTMLElement {
         .controls .search input::placeholder { color: var(--secondary-text-color); }
         .controls .row { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; }
         @container (max-width: 560px) { .controls .row { grid-template-columns: 1fr 1fr; } }
-        .controls .field {
+        .field {
           position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 6px 10px;
           border-radius: 10px; background: rgba(127, 127, 127, 0.12); border: 1px solid var(--divider-color);
         }
-        .controls .field:focus-within { border-color: var(--primary-color); }
-        .controls .lbl { font-size: 0.68em; letter-spacing: 0.05em; text-transform: uppercase; color: var(--secondary-text-color); }
+        .field:focus-within { border-color: var(--primary-color); }
+        .lbl { font-size: 0.68em; letter-spacing: 0.05em; text-transform: uppercase; color: var(--secondary-text-color); }
         .controls .val { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 24px; color: var(--primary-text-color); }
-        .controls select {
+        .field select {
           all: unset; width: 100%; min-height: 24px; padding-right: 18px; font: inherit; color: var(--primary-text-color);
           cursor: pointer; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; box-sizing: border-box;
         }
-        .controls select option, .controls select optgroup { color: initial; background: initial; }
-        .controls .field.sel::after {
+        .field select option, .field select optgroup { color: initial; background: initial; }
+        .field.sel::after {
           content: ""; position: absolute; right: 12px; bottom: 14px; pointer-events: none;
           border: 5px solid transparent; border-top-color: var(--secondary-text-color); border-bottom-width: 0;
         }
@@ -341,7 +341,7 @@ class AHLaatsteKansCard extends HTMLElement {
         }
         .controls .switch:checked { background: var(--primary-color); }
         .controls .switch:checked::after { transform: translateX(16px); }
-        .controls label.field { cursor: pointer; }
+        label.field { cursor: pointer; }
         .store { padding: 4px 16px 12px; }
         .store-h { display: flex; align-items: baseline; gap: 8px; margin: 8px 0; }
         .store-h b { font-size: 1.05em; }
@@ -386,7 +386,7 @@ class AHLaatsteKansCard extends HTMLElement {
         .empty { padding: 16px; color: var(--secondary-text-color); text-align: center; }
       </style>
       <ha-card>
-        <div class="head"><div class="title">${esc(c.title)}</div>${c.store_select ? `<select id="store" class="picker" hidden></select>` : ""}<div class="muted" id="count"></div></div>
+        <div class="head"><div class="title">${esc(c.title)}</div>${c.store_select ? `<label class="field sel store-field" id="storeField" hidden><span class="lbl">Winkel</span><select id="store"></select></label>` : ""}<div class="count" id="count"></div></div>
         ${
           c.show_controls
             ? `<div class="controls">
