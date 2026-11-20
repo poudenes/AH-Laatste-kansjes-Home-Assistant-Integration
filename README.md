@@ -52,6 +52,8 @@ HACS meldt ook nieuwe versies, zodra er een release met een versienummer (bijvoo
 De loginpagina van AH gebruikt reCAPTCHA en een 6-cijferige code. Daarom vraagt HA **niet** om je wachtwoord. Je
 logt in op AH's eigen pagina, en HA krijgt alleen de eenmalige code die AH aan het eind teruggeeft. Daarna ververst
 HA zijn token zelf. Je logt alleen opnieuw in als AH de sessie ooit intrekt; HA vraagt daar dan zelf om.
+Een storing bij AH (bijvoorbeeld onderhoud 's nachts) telt niet: HA vraagt pas om opnieuw inloggen als AH de login
+drie keer achter elkaar echt weigert. Daarvoor probeert hij het gewoon bij de volgende verversing opnieuw.
 
 **Met de [Mac-app](https://github.com/poudenes/AH-Laatste-kansjes-MacOS)** (aanbevolen, en getest):
 1. Kies in de app **Kansjes › Code voor Home Assistant…**
@@ -193,7 +195,7 @@ wel veel. 😄
 ```bash
 python3.13 -m venv .venv && source .venv/bin/activate
 pip install -r requirements_test.txt
-pytest            # 20 tests: config flow, sensoren, opties, events, reauth, HTTP-laag
+pytest            # 24 tests: config flow, sensoren, opties, events, reauth, HTTP-laag
 ```
 
 Bij elke push controleert GitHub Actions de integratie met **hassfest** (de officiële HA-checks), de

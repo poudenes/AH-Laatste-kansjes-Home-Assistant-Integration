@@ -27,7 +27,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.12";
+const CARD_VERSION = "0.1.13";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>

@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
-from custom_components.ah_laatste_kans.api import AHApi, AHAuthError
+from custom_components.ah_laatste_kans.api import AHApi, AHAuthError, AHError
 
 BASE = "https://api.ah.nl"
 
@@ -54,13 +54,41 @@ async def test_expired_token_is_refreshed(hass: HomeAssistant, aioclient_mock: A
     assert aioclient_mock.mock_calls[0][2] == {"clientId": "appie-ios", "refreshToken": "r1"}
 
 
-async def test_redacted_error_is_auth_error(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
-    aioclient_mock.post(f"{BASE}/graphql", json={"data": {"bargainItems": None},
-                                                 "errors": [{"message": "Subgraph errors redacted"}]})
-    api = AHApi(async_get_clientsession(hass), "NL",
-                {"access_token": "a", "refresh_token": "r", "expires_at": time.time() + 999})
+REDACTED = {"data": {"bargainItems": None}, "errors": [{"message": "Subgraph errors redacted"}]}
+
+
+def _api(hass: HomeAssistant) -> AHApi:
+    return AHApi(async_get_clientsession(hass), "NL",
+                 {"access_token": "a", "refresh_token": "r", "expires_at": time.time() + 999})
+
+
+async def test_redacted_with_refused_refresh_is_auth_error(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    aioclient_mock.post(f"{BASE}/graphql", json=REDACTED)
+    aioclient_mock.post(f"{BASE}/mobile-auth/v1/auth/token/refresh", status=400, text="invalid_grant")
     with pytest.raises(AHAuthError):
+        await _api(hass).bargains("1868")
+
+
+async def test_redacted_with_valid_login_is_not_auth_error(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    """A fresh token and still 'redacted': a hiccup at AH, not a reason to log in again."""
+    aioclient_mock.post(f"{BASE}/graphql", json=REDACTED)
+    aioclient_mock.post(f"{BASE}/mobile-auth/v1/auth/token/refresh",
+                        json={"access_token": "a2", "refresh_token": "r2", "expires_in": 3600})
+    api = _api(hass)
+    with pytest.raises(AHError) as err:
         await api.bargains("1868")
+    assert not isinstance(err.value, AHAuthError)
+    assert api.tokens["access_token"] == "a2"
+
+
+async def test_refresh_server_error_is_not_auth_error(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    aioclient_mock.post(f"{BASE}/mobile-auth/v1/auth/token/refresh", status=503, text="maintenance")
+    api = AHApi(async_get_clientsession(hass), "NL",
+                {"access_token": "old", "refresh_token": "r1", "expires_at": time.time() - 10})
+    with pytest.raises(AHError) as err:
+        await api.bargains("1868")
+    assert not isinstance(err.value, AHAuthError)
+    assert api.tokens["refresh_token"] == "r1"  # kept for the next try
 
 
 async def test_refused_code(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
