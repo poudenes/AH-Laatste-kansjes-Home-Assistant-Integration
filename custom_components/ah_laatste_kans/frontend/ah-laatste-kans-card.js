@@ -11,7 +11,7 @@
  *   min_discount: 0          # only show products with at least this discount (%)
  *   sort: discount           # discount | saving | price | expiry | name | group (per product group, like the AH app)
  *   group_by_store: true     # false = one grid over all stores
- *   max_items: 0             # per store (0 = all)
+ *   max_items: 0             # per store (0 = all); ignored when sorting per group
  *   columns: 0               # products per row, e.g. 1 or 2 (bigger pictures); 0 = as many as fit
  *   tile_width: 200          # minimum width of a product (px): as many per row as fit, on every screen
  *                            # (wins over columns)
@@ -27,7 +27,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.14";
+const CARD_VERSION = "0.1.15";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -490,7 +490,8 @@ class AHLaatsteKansCard extends HTMLElement {
       this._root.getElementById("count").textContent = "";
       return;
     }
-    const max = Number(this._config.max_items) || 0;
+    // "Per groep" always shows everything: a limit would cut off the last groups.
+    const max = this._ui.sort === "group" ? 0 : Number(this._config.max_items) || 0;
     let total = 0;
     let html = "";
     if (this._config.group_by_store) {
