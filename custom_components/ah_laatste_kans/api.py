@@ -49,6 +49,10 @@ query BargainItems($storeId: String!) {
 class AHError(Exception):
     """General API error."""
 
+    def __init__(self, message: str = "", status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
 
 class AHAuthError(AHError):
     """The login is missing, expired or refused."""
@@ -211,7 +215,11 @@ class AHApi:
         except AHConnectionError:
             raise
         except AHError as err:
-            raise AHAuthError(f"Token verversen mislukt: {err}") from err
+            # Only a clear "no" (400/401/403, e.g. invalid_grant) means the login is gone.
+            # A server error or rate limit (5xx, 429), often at night, is temporary: try again next time.
+            if err.status in (400, 401, 403):
+                raise AHAuthError(f"Token verversen geweigerd: {err}") from err
+            raise AHError(f"Token verversen lukt even niet: {err}", err.status) from err
         self._store_tokens(data)
 
     async def _ensure_token(self, force: bool = False) -> None:
@@ -251,17 +259,22 @@ class AHApi:
                 await self._ensure_token(force=True)
                 return await self._request(method, path, json=json, params=params, auth=auth, retry=False)
             raise AHAuthError(f"HTTP {status}")
-        raise AHError(f"HTTP {status}: {body}")
+        raise AHError(f"HTTP {status}: {body}", status)
 
-    async def graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+    async def graphql(self, query: str, variables: dict[str, Any], retry: bool = True) -> dict[str, Any]:
         data = await self._request("POST", "/graphql", json={"query": query, "variables": variables})
         errors = (data or {}).get("errors") or []
         if errors:
             msg = "; ".join(str(e.get("message", "")) for e in errors) or "onbekende fout"
             low = msg.lower()
-            # AH hides the reason ("Subgraph errors redacted"); for bargainItems that means: not logged in.
+            # AH hides the reason ("Subgraph errors redacted"). It can mean "not logged in", but also that
+            # a backend is down. So: get a fresh token and try once more. Still an error with a token AH just
+            # gave us? Then it is not the login, but a hiccup at AH.
             if "redacted" in low or "unauthor" in low or "authent" in low or "forbidden" in low:
-                raise AHAuthError(msg)
+                if retry:
+                    await self._ensure_token(force=True)  # raises AHAuthError if AH refuses the login
+                    return await self.graphql(query, variables, retry=False)
+                raise AHError(f"AH gaf een fout terug (login is wel geldig): {msg}")
             raise AHError(msg)
         return (data or {}).get("data") or {}
 

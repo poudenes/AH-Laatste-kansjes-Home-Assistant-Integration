@@ -303,7 +303,15 @@ async def test_auth_failure_starts_reauth(hass: HomeAssistant, mock_api) -> None
     entry = make_entry()
     entry.add_to_hass(hass)
     with patch(f"{API}.bargains", AsyncMock(side_effect=AHAuthError("redacted"))):
+        # One or two refusals (e.g. maintenance at night): just try again later, no new login yet.
         assert not await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert entry.state is ConfigEntryState.SETUP_RETRY
+        assert not hass.config_entries.flow.async_progress()
+        await hass.config_entries.async_reload(entry.entry_id)
+        assert entry.state is ConfigEntryState.SETUP_RETRY
+        # The third refusal in a row: log in again.
+        await hass.config_entries.async_reload(entry.entry_id)
         await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.SETUP_ERROR
     flows = hass.config_entries.flow.async_progress()

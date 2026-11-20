@@ -27,6 +27,10 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# AH must refuse the login this many updates in a row before HA asks to log in again;
+# a single refusal (e.g. during maintenance at night) is not enough.
+AUTH_FAILURES_BEFORE_REAUTH = 3
+
 type AHConfigEntry = ConfigEntry[AHCoordinator]
 
 
@@ -68,6 +72,11 @@ class AHCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._notified: set[str] | None = None
 
     @property
+    def _auth_failures(self) -> dict[str, int]:
+        """Refusals in a row per entry; kept in hass.data so a setup retry does not start counting again."""
+        return self.hass.data.setdefault(DOMAIN, {}).setdefault("auth_failures", {})
+
+    @property
     def stores(self) -> dict[str, dict[str, str]]:
         return dict(self.config_entry.options.get(CONF_STORES, {}))
 
@@ -92,8 +101,17 @@ class AHCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         errors = [err for _, items, err in results if err is not None]
         if stores and len(errors) == len(stores):
             if any(isinstance(e, AHAuthError) for e in errors):
-                raise ConfigEntryAuthFailed("AH wil dat je opnieuw inlogt")
+                count = self._auth_failures.get(self.config_entry.entry_id, 0) + 1
+                self._auth_failures[self.config_entry.entry_id] = count
+                if count >= AUTH_FAILURES_BEFORE_REAUTH:
+                    self._auth_failures.pop(self.config_entry.entry_id, None)
+                    raise ConfigEntryAuthFailed("AH wil dat je opnieuw inlogt")
+                _LOGGER.warning(
+                    "AH weigert de login (%s van %s keer, daarna opnieuw inloggen): %s",
+                    count, AUTH_FAILURES_BEFORE_REAUTH, errors[0],
+                )
             raise UpdateFailed(f"Geen enkele winkel kon worden opgehaald: {errors[0]}")
+        self._auth_failures.pop(self.config_entry.entry_id, None)
 
         previous = (self.data or {}).get("stores", {})
         data_stores: dict[str, dict[str, Any]] = {}
