@@ -9,6 +9,9 @@
  *   store_select: true       # dropdown to pick one store; follows the select entities of every hub
  *                            # (or give one entity_id or a list, e.g. select.ah_laatste_kans_laatste_kans_winkel)
  *   min_discount: 0          # only show products with at least this discount (%)
+ *   exact_discount: 40       # or only products with exactly this discount (%)
+ *   min_price: 0.50          # only products with a new price from ...
+ *   max_price: 1.40          # ... up to and including this price (euro)
  *   sort: discount           # discount | saving | price | expiry | name
  *   group_by_category: false # products per product group (like the AH app); checkbox "Groeperen" in the card
  *   group_by_store: true     # false = one grid over all stores
@@ -18,7 +21,7 @@
  *                            # (wins over columns)
  *   image_size: 160          # height of the pictures (px); default 96, or growing with columns
  *   show_images: true
- *   show_controls: true      # search box, min. discount and sort in the card
+ *   show_controls: true      # search box, Groeperen, discount, price from/to and sort in the card
  *   cart: true               # cart button: adds "Koopjes (40%) product" to the todo list chosen (tap again: removes it)
  *                            # in the integration settings (hidden when no list is chosen)
  *   fonts:                   # text on the product tiles; a number is a size in em, or give an object
@@ -28,7 +31,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.16";
+const CARD_VERSION = "0.1.17";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -58,6 +61,15 @@ const SORTS = {
   name: { label: "Naam", fn: (a, b) => String(a.title).localeCompare(String(b.title), "nl") },
 };
 const category = (i) => String(i.category || "Overig");
+// Discounts AH uses on its stickers.
+const DISCOUNTS = [25, 35, 40, 50, 70, 90];
+// "1,40", "1.40", "€ 1,40" -> 1.4; empty or nonsense -> null.
+function price(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(String(v).replace(/[€\s]/g, "").replace(",", "."));
+  return isFinite(n) && n >= 0 ? n : null;
+}
+const priceText = (v) => (v === null ? "" : String(v).replace(".", ","));
 // Card option `fonts`: which element each key styles.
 const FONT_PARTS = { article: ".t", brand: ".brand", price: ".was", discount: ".now", amount: ".stock" };
 // Only plain CSS values: no ; { } < > that could break out of the rule.
@@ -121,7 +133,12 @@ class AHLaatsteKansCard extends HTMLElement {
     };
     this._ui = {
       text: "",
-      min: Number(this._config.min_discount) || 0,
+      // Discount filter: "min:40" = 40% or more, "eq:40" = exactly 40%.
+      disc: Number(this._config.exact_discount)
+        ? `eq:${Number(this._config.exact_discount)}`
+        : `min:${Number(this._config.min_discount) || 0}`,
+      minPrice: price(this._config.min_price),
+      maxPrice: price(this._config.max_price),
       sort: SORTS[this._config.sort] ? this._config.sort : "discount",
       // `sort: group` was the old way to turn grouping on.
       group: !!this._config.group_by_category || this._config.sort === "group",
@@ -287,6 +304,8 @@ class AHLaatsteKansCard extends HTMLElement {
           border: 1px solid var(--divider-color); border-radius: 8px; padding: 6px 8px;
         }
         .controls input[type="search"] { flex: 1 1 140px; min-width: 120px; }
+        .controls .price { display: inline-flex; align-items: center; gap: 4px; color: var(--secondary-text-color); }
+        .controls .price input { width: 4.5em; }
         .controls .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--primary-text-color); white-space: nowrap; }
         .controls .chk input { margin: 0; width: 18px; height: 18px; accent-color: var(--primary-color); cursor: pointer; }
         .store { padding: 4px 16px 12px; }
@@ -339,7 +358,11 @@ class AHLaatsteKansCard extends HTMLElement {
             ? `<div class="controls">
                  <input id="q" type="search" placeholder="Zoek product of merk">
                  <label class="chk"><input id="grp" type="checkbox">Groeperen</label>
-                 <select id="min">${[0, 25, 35, 50, 70].map((v) => `<option value="${v}">${v ? "≥ " + v + "%" : "Alle kortingen"}</option>`).join("")}</select>
+                 <select id="min"><option value="min:0">Alle kortingen</option>
+                   <optgroup label="Vanaf">${DISCOUNTS.slice(0, -1).map((v) => `<option value="min:${v}">≥ ${v}%</option>`).join("")}</optgroup>
+                   <optgroup label="Precies">${DISCOUNTS.map((v) => `<option value="eq:${v}">${v}%</option>`).join("")}</optgroup>
+                 </select>
+                 <span class="price"><input id="pmin" type="text" inputmode="decimal" placeholder="€ van" title="Nieuwe prijs vanaf">–<input id="pmax" type="text" inputmode="decimal" placeholder="€ tot" title="Nieuwe prijs tot en met"></span>
                  <select id="sort">${Object.entries(SORTS).map(([k, s]) => `<option value="${k}">${s.label}</option>`).join("")}</select>
                </div>`
             : ""
@@ -362,24 +385,36 @@ class AHLaatsteKansCard extends HTMLElement {
       const q = root.getElementById("q");
       const min = root.getElementById("min");
       const sort = root.getElementById("sort");
-      if (![...min.options].some((o) => Number(o.value) === this._ui.min)) {
-        min.insertAdjacentHTML("beforeend", `<option value="${this._ui.min}">≥ ${this._ui.min}%</option>`);
+      if (![...min.options].some((o) => o.value === this._ui.disc)) {
+        const [kind, v] = this._ui.disc.split(":");
+        min.insertAdjacentHTML("beforeend", `<option value="${this._ui.disc}">${kind === "eq" ? "" : "≥ "}${v}%</option>`);
       }
-      min.value = String(this._ui.min);
+      min.value = this._ui.disc;
+      const pmin = root.getElementById("pmin");
+      const pmax = root.getElementById("pmax");
+      pmin.value = priceText(this._ui.minPrice);
+      pmax.value = priceText(this._ui.maxPrice);
+      pmin.addEventListener("input", () => { this._ui.minPrice = price(pmin.value); this._renderList(); });
+      pmax.addEventListener("input", () => { this._ui.maxPrice = price(pmax.value); this._renderList(); });
       sort.value = this._ui.sort;
       const grp = root.getElementById("grp");
       grp.checked = this._ui.group;
       grp.addEventListener("change", () => { this._ui.group = grp.checked; this._renderList(); });
       q.addEventListener("input", () => { this._ui.text = q.value; this._renderList(); });
-      min.addEventListener("change", () => { this._ui.min = Number(min.value); this._renderList(); });
+      min.addEventListener("change", () => { this._ui.disc = min.value; this._renderList(); });
       sort.addEventListener("change", () => { this._ui.sort = sort.value; this._renderList(); });
     }
   }
 
   _filter(items) {
     const text = this._ui.text.trim().toLowerCase();
+    const [kind, value] = this._ui.disc.split(":");
+    const disc = Number(value) || 0;
+    const { minPrice, maxPrice } = this._ui;
     return items
-      .filter((i) => (i.discount || 0) >= this._ui.min)
+      .filter((i) => (kind === "eq" ? (i.discount || 0) === disc : (i.discount || 0) >= disc))
+      .filter((i) => minPrice === null || (i.price ?? -1) >= minPrice - 0.001)
+      .filter((i) => maxPrice === null || (i.price ?? Infinity) <= maxPrice + 0.001)
       .filter((i) => !text || `${i.title} ${i.brand}`.toLowerCase().includes(text))
       .sort(this._ui.group
         ? (a, b) => category(a).localeCompare(category(b), "nl") || SORTS[this._ui.sort].fn(a, b)
