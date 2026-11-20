@@ -101,6 +101,7 @@ image_size: 160           # hoogte van de plaatjes (px), standaard 96
 # columns: 2              # of een vast aantal per regel (plaatjes groeien mee); tile_width gaat voor
 show_images: true
 show_controls: true       # zoekveld, Groeperen, korting (vanaf of precies), prijs van/tot en sorteren in de card
+remember: true            # keuzes in de balk onthouden na verversen (per card, per apparaat)
 cart: true                # winkelwagentje op elk product (zie hieronder)
 fonts:                    # tekst op de producttegels (zie hieronder)
   article: 1.1

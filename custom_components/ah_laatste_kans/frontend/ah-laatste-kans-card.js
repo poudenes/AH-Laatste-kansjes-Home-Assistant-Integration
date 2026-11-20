@@ -22,6 +22,7 @@
  *   image_size: 160          # height of the pictures (px); default 96, or growing with columns
  *   show_images: true
  *   show_controls: true      # search box, Groeperen, discount, price from/to and sort in the card
+ *   remember: true           # keep the choices in the bar after a refresh (per card, per device)
  *   cart: true               # cart button: adds "Koopjes (40%) product" to the todo list chosen (tap again: removes it)
  *                            # in the integration settings (hidden when no list is chosen)
  *   fonts:                   # text on the product tiles; a number is a size in em, or give an object
@@ -39,7 +40,7 @@
  *     group: default
  *     group: 15px            # product group headers (when grouping)
  */
-const CARD_VERSION = "0.1.21";
+const CARD_VERSION = "0.1.22";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -77,7 +78,7 @@ function price(v) {
   const n = Number(String(v).replace(/[€\s]/g, "").replace(",", "."));
   return isFinite(n) && n >= 0 ? n : null;
 }
-const priceText = (v) => (v === null ? "" : String(v).replace(".", ","));
+const priceText = (v) => (v === null ? "" : v.toFixed(2).replace(".", ","));  // 0.5 -> "0,50"
 // Card option `fonts`: which element each key styles.
 const FONT_PARTS = {
   article: ".item .t", brand: ".item .brand", price: ".item .was", discount: ".item .now", amount: ".item .stock",
@@ -202,11 +203,46 @@ class AHLaatsteKansCard extends HTMLElement {
       // `sort: group` was the old way to turn grouping on.
       group: !!this._config.group_by_category || this._config.sort === "group",
     };
+    // What you chose in the card (Groeperen, discount, price, sort) survives a refresh, per card and per device.
+    Object.assign(this._ui, this._loadUi());
     this._built = false;
     this._sig = null;
     this._cart = [];          // products behind the cart buttons, by index
     this._onList = new Map(); // todo entity -> names of open items on that list (button is ticked)
     this._listsSig = null;
+  }
+
+  // Key per card: its title and which stores it shows, so two cards keep their own choices.
+  _uiKey() {
+    const c = this._config;
+    return "ah-laatste-kans-card:" + JSON.stringify([c.title, c.stores, c.entities, c.store_select]);
+  }
+
+  _loadUi() {
+    if (this._config.remember === false) return {};
+    try {
+      const saved = JSON.parse(localStorage.getItem(this._uiKey()) || "{}");
+      const ui = {};
+      if (typeof saved.group === "boolean") ui.group = saved.group;
+      if (/^(min|eq):\d+$/.test(saved.disc || "")) ui.disc = saved.disc;
+      if (SORTS[saved.sort]) ui.sort = saved.sort;
+      for (const k of ["minPrice", "maxPrice"]) if (k in saved) ui[k] = price(saved[k]);
+      return ui;
+    } catch (err) {
+      return {};
+    }
+  }
+
+  _uiChanged() {
+    if (this._config.remember !== false) {
+      const { group, disc, sort, minPrice, maxPrice } = this._ui;
+      try {
+        localStorage.setItem(this._uiKey(), JSON.stringify({ group, disc, sort, minPrice, maxPrice }));
+      } catch (err) {
+        /* private mode or storage full: just do not remember */
+      }
+    }
+    this._renderList();
   }
 
   set hass(hass) {
@@ -494,8 +530,8 @@ class AHLaatsteKansCard extends HTMLElement {
       const pmax = root.getElementById("pmax");
       pmin.value = priceText(this._ui.minPrice);
       pmax.value = priceText(this._ui.maxPrice);
-      pmin.addEventListener("input", () => { this._ui.minPrice = price(pmin.value); this._renderList(); });
-      pmax.addEventListener("input", () => { this._ui.maxPrice = price(pmax.value); this._renderList(); });
+      pmin.addEventListener("input", () => { this._ui.minPrice = price(pmin.value); this._uiChanged(); });
+      pmax.addEventListener("input", () => { this._ui.maxPrice = price(pmax.value); this._uiChanged(); });
       sort.value = this._ui.sort;
       const grp = root.getElementById("grp");
       const grpText = root.getElementById("grpText");
@@ -504,11 +540,11 @@ class AHLaatsteKansCard extends HTMLElement {
       grp.addEventListener("change", () => {
         this._ui.group = grp.checked;
         grpText.textContent = grp.checked ? "Aan" : "Uit";
-        this._renderList();
+        this._uiChanged();
       });
       q.addEventListener("input", () => { this._ui.text = q.value; this._renderList(); });
-      min.addEventListener("change", () => { this._ui.disc = min.value; this._renderList(); });
-      sort.addEventListener("change", () => { this._ui.sort = sort.value; this._renderList(); });
+      min.addEventListener("change", () => { this._ui.disc = min.value; this._uiChanged(); });
+      sort.addEventListener("change", () => { this._ui.sort = sort.value; this._uiChanged(); });
     }
   }
 
