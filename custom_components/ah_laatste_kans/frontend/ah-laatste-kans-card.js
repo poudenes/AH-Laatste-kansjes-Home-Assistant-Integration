@@ -9,9 +9,10 @@
  *   store_select: true       # dropdown to pick one store; follows the select entities of every hub
  *                            # (or give one entity_id or a list, e.g. select.ah_laatste_kans_laatste_kans_winkel)
  *   min_discount: 0          # only show products with at least this discount (%)
- *   sort: discount           # discount | saving | price | expiry | name | group (per product group, like the AH app)
+ *   sort: discount           # discount | saving | price | expiry | name
+ *   group_by_category: false # products per product group (like the AH app); checkbox "Groeperen" in the card
  *   group_by_store: true     # false = one grid over all stores
- *   max_items: 0             # per store (0 = all); ignored when sorting per group
+ *   max_items: 0             # per store (0 = all); ignored when grouping per product group
  *   columns: 0               # products per row, e.g. 1 or 2 (bigger pictures); 0 = as many as fit
  *   tile_width: 200          # minimum width of a product (px): as many per row as fit, on every screen
  *                            # (wins over columns)
@@ -27,7 +28,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.15";
+const CARD_VERSION = "0.1.16";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -55,12 +56,8 @@ const SORTS = {
   price: { label: "Laagste prijs", fn: (a, b) => (a.price ?? 999) - (b.price ?? 999) },
   expiry: { label: "Eerst verlopen", fn: (a, b) => String(a.expires || "9999").localeCompare(String(b.expires || "9999")) },
   name: { label: "Naam", fn: (a, b) => String(a.title).localeCompare(String(b.title), "nl") },
-  // Per product group (category, as in the AH app), and within a group the highest discount first.
-  group: {
-    label: "Per groep",
-    fn: (a, b) => String(a.category || "Overig").localeCompare(String(b.category || "Overig"), "nl") || b.discount - a.discount || saving(b) - saving(a),
-  },
 };
+const category = (i) => String(i.category || "Overig");
 // Card option `fonts`: which element each key styles.
 const FONT_PARTS = { article: ".t", brand: ".brand", price: ".was", discount: ".now", amount: ".stock" };
 // Only plain CSS values: no ; { } < > that could break out of the rule.
@@ -122,7 +119,13 @@ class AHLaatsteKansCard extends HTMLElement {
       cart: true,
       ...(config || {}),
     };
-    this._ui = { text: "", min: Number(this._config.min_discount) || 0, sort: SORTS[this._config.sort] ? this._config.sort : "discount" };
+    this._ui = {
+      text: "",
+      min: Number(this._config.min_discount) || 0,
+      sort: SORTS[this._config.sort] ? this._config.sort : "discount",
+      // `sort: group` was the old way to turn grouping on.
+      group: !!this._config.group_by_category || this._config.sort === "group",
+    };
     this._built = false;
     this._sig = null;
     this._cart = [];          // products behind the cart buttons, by index
@@ -283,7 +286,9 @@ class AHLaatsteKansCard extends HTMLElement {
           font: inherit; color: var(--primary-text-color); background: var(--card-background-color);
           border: 1px solid var(--divider-color); border-radius: 8px; padding: 6px 8px;
         }
-        .controls input { flex: 1 1 140px; min-width: 120px; }
+        .controls input[type="search"] { flex: 1 1 140px; min-width: 120px; }
+        .controls .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--primary-text-color); white-space: nowrap; }
+        .controls .chk input { margin: 0; width: 18px; height: 18px; accent-color: var(--primary-color); cursor: pointer; }
         .store { padding: 4px 16px 12px; }
         .store-h { display: flex; align-items: baseline; gap: 8px; margin: 8px 0; }
         .store-h b { font-size: 1.05em; }
@@ -333,6 +338,7 @@ class AHLaatsteKansCard extends HTMLElement {
           c.show_controls
             ? `<div class="controls">
                  <input id="q" type="search" placeholder="Zoek product of merk">
+                 <label class="chk"><input id="grp" type="checkbox">Groeperen</label>
                  <select id="min">${[0, 25, 35, 50, 70].map((v) => `<option value="${v}">${v ? "≥ " + v + "%" : "Alle kortingen"}</option>`).join("")}</select>
                  <select id="sort">${Object.entries(SORTS).map(([k, s]) => `<option value="${k}">${s.label}</option>`).join("")}</select>
                </div>`
@@ -361,6 +367,9 @@ class AHLaatsteKansCard extends HTMLElement {
       }
       min.value = String(this._ui.min);
       sort.value = this._ui.sort;
+      const grp = root.getElementById("grp");
+      grp.checked = this._ui.group;
+      grp.addEventListener("change", () => { this._ui.group = grp.checked; this._renderList(); });
       q.addEventListener("input", () => { this._ui.text = q.value; this._renderList(); });
       min.addEventListener("change", () => { this._ui.min = Number(min.value); this._renderList(); });
       sort.addEventListener("change", () => { this._ui.sort = sort.value; this._renderList(); });
@@ -372,7 +381,9 @@ class AHLaatsteKansCard extends HTMLElement {
     return items
       .filter((i) => (i.discount || 0) >= this._ui.min)
       .filter((i) => !text || `${i.title} ${i.brand}`.toLowerCase().includes(text))
-      .sort(SORTS[this._ui.sort].fn);
+      .sort(this._ui.group
+        ? (a, b) => category(a).localeCompare(category(b), "nl") || SORTS[this._ui.sort].fn(a, b)
+        : SORTS[this._ui.sort].fn);
   }
 
   _listName(i) {
@@ -465,12 +476,12 @@ class AHLaatsteKansCard extends HTMLElement {
       title="${done ? "Staat op je lijst (tik om weg te halen)" : "Op de boodschappenlijst"}"><ha-icon icon="mdi:cart-${done ? "check" : "plus"}"></ha-icon></button>`;
   }
 
-  // One grid, or with "Per groep" a header and a grid per product group.
+  // One grid, or when grouping a header and a grid per product group.
   _gridHtml(items, tile) {
-    if (this._ui.sort !== "group") return `<div class="grid">${items.map(tile).join("")}</div>`;
+    if (!this._ui.group) return `<div class="grid">${items.map(tile).join("")}</div>`;
     const groups = new Map();
     for (const i of items) {
-      const cat = i.category || "Overig";
+      const cat = category(i);
       if (!groups.has(cat)) groups.set(cat, []);
       groups.get(cat).push(i);
     }
@@ -490,8 +501,8 @@ class AHLaatsteKansCard extends HTMLElement {
       this._root.getElementById("count").textContent = "";
       return;
     }
-    // "Per groep" always shows everything: a limit would cut off the last groups.
-    const max = this._ui.sort === "group" ? 0 : Number(this._config.max_items) || 0;
+    // Grouped always shows everything: a limit would cut off the last groups.
+    const max = this._ui.group ? 0 : Number(this._config.max_items) || 0;
     let total = 0;
     let html = "";
     if (this._config.group_by_store) {
