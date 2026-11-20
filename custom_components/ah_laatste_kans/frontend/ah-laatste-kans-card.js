@@ -9,7 +9,7 @@
  *   store_select: true       # dropdown to pick one store; follows the select entities of every hub
  *                            # (or give one entity_id or a list, e.g. select.ah_laatste_kans_laatste_kans_winkel)
  *   min_discount: 0          # only show products with at least this discount (%)
- *   sort: discount           # discount | saving | price | expiry | name
+ *   sort: discount           # discount | saving | price | expiry | name | group (per product group, like the AH app)
  *   group_by_store: true     # false = one grid over all stores
  *   max_items: 0             # per store (0 = all)
  *   columns: 0               # products per row, e.g. 1 or 2 (bigger pictures); 0 = as many as fit
@@ -27,7 +27,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.13";
+const CARD_VERSION = "0.1.14";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -55,6 +55,11 @@ const SORTS = {
   price: { label: "Laagste prijs", fn: (a, b) => (a.price ?? 999) - (b.price ?? 999) },
   expiry: { label: "Eerst verlopen", fn: (a, b) => String(a.expires || "9999").localeCompare(String(b.expires || "9999")) },
   name: { label: "Naam", fn: (a, b) => String(a.title).localeCompare(String(b.title), "nl") },
+  // Per product group (category, as in the AH app), and within a group the highest discount first.
+  group: {
+    label: "Per groep",
+    fn: (a, b) => String(a.category || "Overig").localeCompare(String(b.category || "Overig"), "nl") || b.discount - a.discount || saving(b) - saving(a),
+  },
 };
 // Card option `fonts`: which element each key styles.
 const FONT_PARTS = { article: ".t", brand: ".brand", price: ".was", discount: ".now", amount: ".stock" };
@@ -284,6 +289,8 @@ class AHLaatsteKansCard extends HTMLElement {
         .store-h b { font-size: 1.05em; }
         .muted { color: var(--secondary-text-color); font-size: 0.85em; }
         .warn { color: var(--warning-color, #f4b400); font-size: 0.85em; }
+        .cat-h { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 6px; font-weight: 600; font-size: 0.95em; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px; }
+        .cat-h:first-child { margin-top: 0; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
         .item {
           position: relative; display: flex; flex-direction: column; gap: 4px; padding: 8px;
@@ -458,6 +465,20 @@ class AHLaatsteKansCard extends HTMLElement {
       title="${done ? "Staat op je lijst (tik om weg te halen)" : "Op de boodschappenlijst"}"><ha-icon icon="mdi:cart-${done ? "check" : "plus"}"></ha-icon></button>`;
   }
 
+  // One grid, or with "Per groep" a header and a grid per product group.
+  _gridHtml(items, tile) {
+    if (this._ui.sort !== "group") return `<div class="grid">${items.map(tile).join("")}</div>`;
+    const groups = new Map();
+    for (const i of items) {
+      const cat = i.category || "Overig";
+      if (!groups.has(cat)) groups.set(cat, []);
+      groups.get(cat).push(i);
+    }
+    return [...groups]
+      .map(([cat, list]) => `<div class="cat-h">${esc(cat)}<span class="muted">${list.length}</span></div><div class="grid">${list.map(tile).join("")}</div>`)
+      .join("");
+  }
+
   _renderList() {
     if (!this._root || !this._hass) return;
     this._cart = [];
@@ -482,7 +503,7 @@ class AHLaatsteKansCard extends HTMLElement {
         html += `<div class="store">
           <div class="store-h"><b>${esc(a.store || a.friendly_name)}</b><span class="muted">${items.length} producten</span>
           ${a.error ? `<span class="warn" title="${esc(a.error)}">⚠︎ verouderd</span>` : ""}</div>
-          ${items.length ? `<div class="grid">${items.map((i) => this._itemHtml(i)).join("")}</div>` : `<div class="muted">Niets dat past bij je filter.</div>`}
+          ${items.length ? this._gridHtml(items, (i) => this._itemHtml(i)) : `<div class="muted">Niets dat past bij je filter.</div>`}
         </div>`;
       }
     } else {
@@ -492,7 +513,7 @@ class AHLaatsteKansCard extends HTMLElement {
       total = all.length;
       if (max) all = all.slice(0, max);
       html = all.length
-        ? `<div class="store"><div class="grid">${all.map((i) => this._itemHtml(i, i._store)).join("")}</div></div>`
+        ? `<div class="store">${this._gridHtml(all, (i) => this._itemHtml(i, i._store))}</div>`
         : `<div class="empty">Niets dat past bij je filter.</div>`;
     }
     list.innerHTML = html;
