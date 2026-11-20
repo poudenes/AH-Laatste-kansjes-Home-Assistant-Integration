@@ -89,6 +89,9 @@ stores:                   # winkels op (een deel van) hun naam; standaard: alle 
 #   - sensor.ah_vondellaan_200_utrecht_laatste_kans
 store_select: true        # keuzemenu om één winkel te tonen (zie hieronder)
 min_discount: 35          # alleen ≥ 35% korting
+# exact_discount: 40      # of alleen precies 40% korting
+# min_price: 0.50         # alleen een nieuwe prijs vanaf € 0,50 ...
+# max_price: 1.40         # ... tot en met € 1,40
 sort: discount            # discount | saving | price | expiry | name
 group_by_category: false  # per productgroep, zoals in de AH-app (vakje "Groeperen" in de card)
 group_by_store: true      # false = één grid over alle winkels
@@ -97,7 +100,7 @@ tile_width: 200           # minimale breedte van een product (px): zoveel per re
 image_size: 160           # hoogte van de plaatjes (px), standaard 96
 # columns: 2              # of een vast aantal per regel (plaatjes groeien mee); tile_width gaat voor
 show_images: true
-show_controls: true       # zoekveld, Groeperen, min. korting en sorteren in de card
+show_controls: true       # zoekveld, Groeperen, korting (vanaf of precies), prijs van/tot en sorteren in de card
 cart: true                # winkelwagentje op elk product (zie hieronder)
 fonts:                    # tekst op de producttegels (zie hieronder)
   article: 1.1
