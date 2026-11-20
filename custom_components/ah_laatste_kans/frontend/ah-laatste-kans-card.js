@@ -30,8 +30,9 @@
  *     price: 0.9             # original (struck-through) price
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
+ *     group: 15px            # product group headers (when grouping)
  */
-const CARD_VERSION = "0.1.19";
+const CARD_VERSION = "0.1.20";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -71,7 +72,10 @@ function price(v) {
 }
 const priceText = (v) => (v === null ? "" : String(v).replace(".", ","));
 // Card option `fonts`: which element each key styles.
-const FONT_PARTS = { article: ".t", brand: ".brand", price: ".was", discount: ".now", amount: ".stock" };
+const FONT_PARTS = {
+  article: ".item .t", brand: ".item .brand", price: ".item .was", discount: ".item .now", amount: ".item .stock",
+  group: ".cat-h",
+};
 // Only plain CSS values: no ; { } < > that could break out of the rule.
 const cssValue = (v) => String(v).replace(/[;{}<>\\]/g, "").trim();
 const cssSize = (v) => (typeof v === "number" || /^\d+(\.\d+)?$/.test(String(v).trim()) ? `${Number(v)}em` : cssValue(v));
@@ -89,7 +93,7 @@ function fontCss(fonts) {
     if (f.family) rules.push(`font-family: ${cssValue(f.family)}`);
     if (f.style) rules.push(`font-style: ${cssValue(f.style)}`);
     if (f.color) rules.push(`color: ${cssValue(f.color)}`);
-    if (rules.length) css += `.item ${selector} { ${rules.join("; ")}; }\n`;
+    if (rules.length) css += `${selector} { ${rules.join("; ")}; }\n`;
   }
   return css;
 }
