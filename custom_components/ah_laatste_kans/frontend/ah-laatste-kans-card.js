@@ -30,9 +30,16 @@
  *     price: 0.9             # original (struck-through) price
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
+ *   color:                   # text colour per part (same keys as fonts); "default" = the normal colour
+ *     article: default
+ *     brand: yellow          # a colour name, #ffcc00, or rgb(...)
+ *     price: 255,255,0       # red, green, blue (0-255)
+ *     discount: 0.70,0.30    # x,y colour as in Home Assistant lights (xy_color)
+ *     amount: green
+ *     group: default
  *     group: 15px            # product group headers (when grouping)
  */
-const CARD_VERSION = "0.1.20";
+const CARD_VERSION = "0.1.21";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -76,6 +83,54 @@ const FONT_PARTS = {
   article: ".item .t", brand: ".item .brand", price: ".item .was", discount: ".item .now", amount: ".item .stock",
   group: ".cat-h",
 };
+/*
+ * Card option `color`: one colour per part, written in any of these ways:
+ *   default / normal / ""      -> leave the colour as it is
+ *   yellow, #ffcc00, rgb(..)   -> as CSS colour
+ *   255,255,0  or [255,255,0]  -> red, green, blue 0-255 (a 4th value is opacity)
+ *   0.70,0.30  or [0.7, 0.3]   -> CIE x,y as with Home Assistant lights (xy_color)
+ */
+function cssColor(v) {
+  if (v === null || v === undefined) return null;
+  const nums = Array.isArray(v)
+    ? v.map(Number)
+    : /^\s*[\d.]+(\s*,\s*[\d.]+){1,3}\s*$/.test(String(v)) ? String(v).split(",").map(Number) : null;
+  if (nums && nums.every((n) => isFinite(n) && n >= 0)) {
+    if (nums.length === 2) return xyToRgb(nums[0], nums[1]);
+    if (nums.length >= 3) {
+      const [r, g, b] = nums.map((n) => Math.round(Math.min(255, n)));
+      return nums.length === 4 ? `rgba(${r}, ${g}, ${b}, ${Math.min(1, nums[3])})` : `rgb(${r}, ${g}, ${b})`;
+    }
+  }
+  const text = cssValue(v);
+  return !text || /^(default|normal|standaard|none|auto)$/i.test(text) ? null : text;
+}
+
+// CIE 1931 x,y (as in HA's xy_color) to an sRGB colour at full brightness.
+function xyToRgb(x, y) {
+  if (!(y > 0) || x < 0 || x > 1 || y > 1) return null;
+  const Y = 1, X = (Y / y) * x, Z = (Y / y) * (1 - x - y);
+  let rgb = [
+    X * 3.2406 - Y * 1.5372 - Z * 0.4986,
+    -X * 0.9689 + Y * 1.8758 + Z * 0.0415,
+    X * 0.0557 - Y * 0.204 + Z * 1.057,
+  ].map((c) => Math.max(0, c));
+  const max = Math.max(...rgb) || 1;
+  rgb = rgb.map((c) => c / max).map((c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055));
+  const [r, g, b] = rgb.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function colorCss(colors) {
+  if (!colors || typeof colors !== "object" || Array.isArray(colors)) return "";
+  let css = "";
+  for (const [key, selector] of Object.entries(FONT_PARTS)) {
+    const color = cssColor(colors[key]);
+    if (color) css += `${selector} { color: ${color}; }\n`;
+  }
+  return css;
+}
+
 // Only plain CSS values: no ; { } < > that could break out of the rule.
 const cssValue = (v) => String(v).replace(/[;{}<>\\]/g, "").trim();
 const cssSize = (v) => (typeof v === "number" || /^\d+(\.\d+)?$/.test(String(v).trim()) ? `${Number(v)}em` : cssValue(v));
@@ -387,6 +442,7 @@ class AHLaatsteKansCard extends HTMLElement {
         ${columnsCss(c.tile_width ? 0 : c.columns)}
         ${layoutCss(c)}
         ${fontCss(c.fonts)}
+        ${colorCss(c.color || c.colors)}
         .empty { padding: 16px; color: var(--secondary-text-color); text-align: center; }
       </style>
       <ha-card>

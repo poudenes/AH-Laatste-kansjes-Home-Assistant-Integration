@@ -137,6 +137,23 @@ fonts:
   amount: { size: 1.2, family: monospace }
 ```
 
+### Kleur per onderdeel
+
+Met `color` geef je elk onderdeel (dezelfde namen als bij `fonts`) een eigen tekstkleur. Je mag de kleur op
+verschillende manieren schrijven:
+
+```yaml
+color:
+  article: default      # default = de gewone kleur
+  brand: yellow         # een kleurnaam, #ffcc00 of rgb(...)
+  price: 255,255,0      # rood, groen, blauw (0-255); een 4e getal is de doorzichtigheid (0-1)
+  discount: 0.70,0.30   # x,y zoals bij lampen in Home Assistant (xy_color)
+  amount: green
+  group: "#00a0e2"
+```
+
+Lijstjes mogen ook: `price: [255, 255, 0]`. `color` gaat voor een `color` binnen `fonts`.
+
 Klik op een product om het op ah.nl te openen.
 
 ### Eén card, winkel kiezen
