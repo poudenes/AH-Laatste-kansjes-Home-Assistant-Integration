@@ -116,7 +116,7 @@ plaatjes meegroeien met de breedte. Staan beide in je config, dan gaat `tile_wid
 
 ### Lettertype per onderdeel
 
-Met `fonts` pas je de tekst op de producttegels aan. Een getal is de grootte in `em` (1 = normaal), maar `14px` mag
+Met `fonts` pas je de tekst op de producttegels en de groepskopjes aan. Een getal is de grootte in `em` (1 = normaal), maar `14px` mag
 ook. Wil je meer aanpassen, geef dan een object met `size`, `weight`, `family`, `style` en/of `color`.
 
 | Optie | Wat | Standaard |
@@ -126,6 +126,7 @@ ook. Wil je meer aanpassen, geef dan een object met `size`, `weight`, `family`, 
 | `price` | originele (doorgestreepte) prijs | `0.8` |
 | `discount` | nieuwe prijs | `1.1` extra vet, oranje |
 | `amount` | aantal beschikbaar (`×3`) | `1` (t.o.v. de THT-regel) |
+| `group` | kopje van een productgroep (bij Groeperen) | `0.95` vet |
 
 ```yaml
 fonts:
