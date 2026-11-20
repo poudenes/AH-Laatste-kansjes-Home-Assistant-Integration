@@ -31,7 +31,7 @@
  *     discount: { size: 1.4, weight: 800, color: "#e00" }   # new price
  *     amount: { size: 1.2, family: monospace }              # number in stock
  */
-const CARD_VERSION = "0.1.17";
+const CARD_VERSION = "0.1.18";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>
@@ -298,16 +298,50 @@ class AHLaatsteKansCard extends HTMLElement {
           font: inherit; color: var(--primary-text-color); background: var(--card-background-color);
           border: 1px solid var(--divider-color); border-radius: 8px; padding: 6px 8px; max-width: 100%;
         }
-        .controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0 16px 8px; }
-        .controls input, .controls select {
-          font: inherit; color: var(--primary-text-color); background: var(--card-background-color);
-          border: 1px solid var(--divider-color); border-radius: 8px; padding: 6px 8px;
+        /* Filter bar: a round search bar, below it four boxes with a small label (2 per row on a phone). */
+        .controls { container-type: inline-size; display: flex; flex-direction: column; gap: 10px; padding: 4px 16px 12px; }
+        .controls .search {
+          display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px; border-radius: 21px;
+          background: rgba(127, 127, 127, 0.12); border: 1px solid var(--divider-color); color: var(--secondary-text-color);
+          --mdc-icon-size: 20px;
         }
-        .controls input[type="search"] { flex: 1 1 140px; min-width: 120px; }
-        .controls .price { display: inline-flex; align-items: center; gap: 4px; color: var(--secondary-text-color); }
-        .controls .price input { width: 4.5em; }
-        .controls .chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--primary-text-color); white-space: nowrap; }
-        .controls .chk input { margin: 0; width: 18px; height: 18px; accent-color: var(--primary-color); cursor: pointer; }
+        .controls .search input { all: unset; flex: 1; min-width: 0; font: inherit; color: var(--primary-text-color); }
+        .controls .search input::placeholder { color: var(--secondary-text-color); }
+        .controls .row { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; }
+        @container (max-width: 560px) { .controls .row { grid-template-columns: 1fr 1fr; } }
+        .controls .field {
+          position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 6px 10px;
+          border-radius: 10px; background: rgba(127, 127, 127, 0.12); border: 1px solid var(--divider-color);
+        }
+        .controls .field:focus-within { border-color: var(--primary-color); }
+        .controls .lbl { font-size: 0.68em; letter-spacing: 0.05em; text-transform: uppercase; color: var(--secondary-text-color); }
+        .controls .val { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 24px; color: var(--primary-text-color); }
+        .controls select {
+          all: unset; width: 100%; min-height: 24px; padding-right: 18px; font: inherit; color: var(--primary-text-color);
+          cursor: pointer; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; box-sizing: border-box;
+        }
+        .controls select option, .controls select optgroup { color: initial; background: initial; }
+        .controls .field.sel::after {
+          content: ""; position: absolute; right: 12px; bottom: 14px; pointer-events: none;
+          border: 5px solid transparent; border-top-color: var(--secondary-text-color); border-bottom-width: 0;
+        }
+        .controls .price input {
+          all: unset; width: 3.2em; min-width: 0; text-align: center; font: inherit; color: var(--primary-text-color);
+          border-bottom: 1px dashed var(--divider-color);
+        }
+        .controls .price input::placeholder { color: var(--secondary-text-color); }
+        .controls .price .val { justify-content: flex-start; gap: 8px; color: var(--secondary-text-color); }
+        .controls .switch {
+          appearance: none; -webkit-appearance: none; margin: 0; flex: none; position: relative; width: 36px; height: 20px;
+          border-radius: 10px; background: var(--divider-color); cursor: pointer; transition: background 0.2s;
+        }
+        .controls .switch::after {
+          content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+          background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); transition: transform 0.2s;
+        }
+        .controls .switch:checked { background: var(--primary-color); }
+        .controls .switch:checked::after { transform: translateX(16px); }
+        .controls label.field { cursor: pointer; }
         .store { padding: 4px 16px 12px; }
         .store-h { display: flex; align-items: baseline; gap: 8px; margin: 8px 0; }
         .store-h b { font-size: 1.05em; }
@@ -356,14 +390,20 @@ class AHLaatsteKansCard extends HTMLElement {
         ${
           c.show_controls
             ? `<div class="controls">
-                 <input id="q" type="search" placeholder="Zoek product of merk">
-                 <label class="chk"><input id="grp" type="checkbox">Groeperen</label>
-                 <select id="min"><option value="min:0">Alle kortingen</option>
-                   <optgroup label="Vanaf">${DISCOUNTS.slice(0, -1).map((v) => `<option value="min:${v}">≥ ${v}%</option>`).join("")}</optgroup>
-                   <optgroup label="Precies">${DISCOUNTS.map((v) => `<option value="eq:${v}">${v}%</option>`).join("")}</optgroup>
-                 </select>
-                 <span class="price"><input id="pmin" type="text" inputmode="decimal" placeholder="€ van" title="Nieuwe prijs vanaf">–<input id="pmax" type="text" inputmode="decimal" placeholder="€ tot" title="Nieuwe prijs tot en met"></span>
-                 <select id="sort">${Object.entries(SORTS).map(([k, s]) => `<option value="${k}">${s.label}</option>`).join("")}</select>
+                 <div class="search"><ha-icon icon="mdi:magnify"></ha-icon><input id="q" type="search" placeholder="Zoek product of merk"></div>
+                 <div class="row">
+                   <label class="field"><span class="lbl">Groeperen</span>
+                     <span class="val"><span id="grpText">Uit</span><input id="grp" type="checkbox" class="switch"></span></label>
+                   <label class="field sel"><span class="lbl">Korting</span>
+                     <select id="min"><option value="min:0">Alle kortingen</option>
+                       <optgroup label="Vanaf">${DISCOUNTS.slice(0, -1).map((v) => `<option value="min:${v}">≥ ${v}%</option>`).join("")}</optgroup>
+                       <optgroup label="Precies">${DISCOUNTS.map((v) => `<option value="eq:${v}">${v}%</option>`).join("")}</optgroup>
+                     </select></label>
+                   <div class="field price"><span class="lbl">Prijs (€)</span>
+                     <span class="val"><input id="pmin" type="text" inputmode="decimal" placeholder="van" title="Nieuwe prijs vanaf">tot<input id="pmax" type="text" inputmode="decimal" placeholder="tot" title="Nieuwe prijs tot en met"></span></div>
+                   <label class="field sel"><span class="lbl">Sorteren</span>
+                     <select id="sort">${Object.entries(SORTS).map(([k, s]) => `<option value="${k}">${s.label}</option>`).join("")}</select></label>
+                 </div>
                </div>`
             : ""
         }
@@ -398,8 +438,14 @@ class AHLaatsteKansCard extends HTMLElement {
       pmax.addEventListener("input", () => { this._ui.maxPrice = price(pmax.value); this._renderList(); });
       sort.value = this._ui.sort;
       const grp = root.getElementById("grp");
+      const grpText = root.getElementById("grpText");
       grp.checked = this._ui.group;
-      grp.addEventListener("change", () => { this._ui.group = grp.checked; this._renderList(); });
+      grpText.textContent = grp.checked ? "Aan" : "Uit";
+      grp.addEventListener("change", () => {
+        this._ui.group = grp.checked;
+        grpText.textContent = grp.checked ? "Aan" : "Uit";
+        this._renderList();
+      });
       q.addEventListener("input", () => { this._ui.text = q.value; this._renderList(); });
       min.addEventListener("change", () => { this._ui.disc = min.value; this._renderList(); });
       sort.addEventListener("change", () => { this._ui.sort = sort.value; this._renderList(); });
