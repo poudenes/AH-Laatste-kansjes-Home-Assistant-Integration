@@ -91,7 +91,7 @@ store_select: true        # keuzemenu om één winkel te tonen (zie hieronder)
 min_discount: 35          # alleen ≥ 35% korting
 sort: discount            # discount | saving | price | expiry | name | group (per productgroep, zoals in de AH-app)
 group_by_store: true      # false = één grid over alle winkels
-max_items: 12             # per winkel, 0 = alles
+max_items: 12             # per winkel, 0 = alles; geldt niet bij sorteren "Per groep"
 tile_width: 200           # minimale breedte van een product (px): zoveel per regel als past, op elk scherm
 image_size: 160           # hoogte van de plaatjes (px), standaard 96
 # columns: 2              # of een vast aantal per regel (plaatjes groeien mee); tile_width gaat voor
