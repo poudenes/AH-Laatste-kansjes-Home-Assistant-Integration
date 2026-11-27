@@ -40,7 +40,7 @@
  *     group: default
  *     group: 15px            # product group headers (when grouping)
  */
-const CARD_VERSION = "0.1.22";
+const CARD_VERSION = "0.1.23";
 const ALL_STORES = "Alle winkels";  // first option of the select entity
 
 const esc = (s) =>

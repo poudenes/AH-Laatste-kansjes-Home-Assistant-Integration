@@ -10,7 +10,7 @@
       },
       "login": {
         "title": "Log in to Albert Heijn",
-        "description": "You log in on **AH's own page**, with your password and the 6-digit code. Home Assistant never sees your password.\n\n**With the Mac app (recommended):**\n1. In the app, choose **Kansjes › Code voor Home Assistant…**\n2. Log in and enter the 6 digits. The code is then on your clipboard.\n3. Paste it below and submit **right away**: the code expires quickly.\n\n**Without the Mac app** (may not work: AH's verification step sometimes refuses regular browsers): open the developer tools (F12) on the Console tab, log in via the [AH login page]({login_url}) and copy the `appie://login-exit?code=…` line from the console.",
+        "description": "You log in on **AH's own page**, with your password and the 6-digit code. Home Assistant never sees your password.\n\n1. Open the developer tools of your browser (**F12**, or **⌥⌘I** on a Mac) and go to the **Console** tab.\n2. Open the [AH login page]({login_url}) in that tab and log in.\n3. At the end the browser cannot open the `appie://` link and shows it in the console. Copy the whole `appie://login-exit?code=…` link.\n4. Paste it below and submit **right away**: the code expires within a few minutes.\n\nAH's verification step sometimes refuses a regular browser. Then try again a bit later or in another browser (Chrome, Edge or Firefox).",
         "data": {
           "code": "Code"
         }
